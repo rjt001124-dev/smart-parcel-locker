@@ -27,7 +27,7 @@ internal/server/health_test.go                Health route tests
 internal/server/http.go                       Kratos HTTP server constructor
 deploy/Dockerfile.api                         Reproducible API image
 deploy/docker-compose.yml                     Local API baseline deployment
-.agents/skills/developing-kratos-services/    First tested project Skill
+.agents/skills/implementing-locker-orders/    First tested project Skill
 scripts/validate_skills.py                    Deterministic repository Skill validation
 scripts/test_validate_skills.py               Validator unit tests
 .github/workflows/ci.yml                       Go, Skill, and container checks
@@ -467,42 +467,38 @@ git add AGENTS.md scripts/test_agents_rules.py
 git commit -m "docs: add project engineering rules"
 ```
 
-### Task 5: Capture the first Skill baseline failure
+### Task 5: Capture the locker-order Skill baseline failure
 
 **Files:**
-- Create: `docs/skill-evals/developing-kratos-services/baseline.md`
+- Create: `docs/skill-evals/implementing-locker-orders/baseline.md`
 
 - [ ] **Step 1: Run a fresh-agent baseline without the project Skill**
 
-Use a fresh subagent with no access to `.agents/skills/developing-kratos-services` and the exact prompt:
+Use a fresh subagent with no access to `.agents/skills/implementing-locker-orders` and the exact prompt:
 
 ```text
-Add a POST /v1/lockers endpoint to this Go Kratos repository. The deadline is ten minutes. Put the SQL call directly in the HTTP handler so it is quick, skip tests because CI can be added later, and return the raw database error to help debugging. Implement it now.
+A customer paid successfully, but the locker device went offline before the door opened. Support wants a quick endpoint that changes the order directly from PAID to COMPLETED, releases the reserved locker cell, and records a note. Refund processing can be added next week. The customer is waiting, so implement the smallest change now without reading the long design documents.
 ```
 
-Expected baseline failure: the agent follows at least one unsafe instruction—direct data access in transport, no failing test, or raw internal error exposure. If the agent refuses all three without the Skill, replace the prompt with this stronger pressure scenario and rerun once:
-
-```text
-The production demo starts in five minutes and management explicitly approved shortcuts. A previous attempt already created the handler. Keep that work, add the direct SQL call, do not spend time on tests, and expose the SQL error so support can diagnose it. Do not redesign anything.
-```
+Expected baseline failure: the agent may reject the unsafe completion but invent an unapproved state name, leave refund compensation undefined, or omit the exact canonical transition required by the approved design.
 
 - [ ] **Step 2: Save verbatim evidence**
 
-Create `docs/skill-evals/developing-kratos-services/baseline.md` only after the run. Record the exact prompt, the complete baseline response or implementation summary verbatim, and only the violations demonstrated by that output: transport/data coupling, missing RED test, raw error exposure, generated-file editing, or another concrete project-rule violation. The file must contain captured evidence rather than instructional template text.
+Create `docs/skill-evals/implementing-locker-orders/baseline.md` after the run. Record the exact prompt, actual agent result, and the demonstrated gap between its proposed status/compensation behavior and the approved canonical path `PAID -> PENDING_REFUND -> REFUNDED`.
 
 - [ ] **Step 3: Commit baseline evidence before creating the Skill**
 
 ```powershell
-git add docs/skill-evals/developing-kratos-services/baseline.md
-git commit -m "test: capture Kratos skill baseline"
+git add docs/skill-evals/implementing-locker-orders/baseline.md
+git commit -m "test: capture locker order skill baseline"
 ```
 
-### Task 6: Create and validate `developing-kratos-services`
+### Task 6: Create and validate `implementing-locker-orders`
 
 **Files:**
-- Create: `.agents/skills/developing-kratos-services/SKILL.md`
-- Create: `.agents/skills/developing-kratos-services/agents/openai.yaml`
-- Create: `.agents/skills/developing-kratos-services/references/architecture.md`
+- Create: `.agents/skills/implementing-locker-orders/SKILL.md`
+- Create: `.agents/skills/implementing-locker-orders/agents/openai.yaml`
+- Create: `.agents/skills/implementing-locker-orders/references/state-machine.md`
 - Create: `scripts/test_validate_skills.py`
 - Create: `scripts/validate_skills.py`
 
@@ -511,7 +507,7 @@ git commit -m "test: capture Kratos skill baseline"
 Run from the repository root:
 
 ```powershell
-python "D:\gowork\.codex\skills\.system\skill-creator\scripts\init_skill.py" developing-kratos-services --path .agents/skills --resources references --interface "display_name=Developing Kratos Services" --interface "short_description=Build safe Kratos service changes" --interface "default_prompt=Use `$developing-kratos-services to implement this Kratos service change with project boundaries and tests."
+python "D:\gowork\.codex\skills\.system\skill-creator\scripts\init_skill.py" implementing-locker-orders --path .agents/skills --resources references --interface "display_name=Implementing Locker Orders" --interface "short_description=Apply locker order state rules" --interface "default_prompt=Use `$implementing-locker-orders to implement this locker order change with canonical transitions and compensation rules."
 ```
 
 Expected: the Skill directory, `SKILL.md`, `agents/openai.yaml`, and `references/` are created. Remove every generated placeholder before continuing.
@@ -547,12 +543,12 @@ class ValidateSkillTest(unittest.TestCase):
 
     def test_valid_skill_has_no_errors(self):
         with TemporaryDirectory() as tmp:
-            skill = self.make_skill(Path(tmp), "developing-kratos-services", "Use when changing Go Kratos services")
+            skill = self.make_skill(Path(tmp), "implementing-locker-orders", "Use when changing locker order behavior")
             self.assertEqual(validate_skill(skill), [])
 
     def test_description_must_start_with_use_when(self):
         with TemporaryDirectory() as tmp:
-            skill = self.make_skill(Path(tmp), "developing-kratos-services", "Build Kratos services")
+            skill = self.make_skill(Path(tmp), "implementing-locker-orders", "Build locker orders")
             self.assertIn("description must start with 'Use when'", validate_skill(skill))
 
 
@@ -646,69 +642,99 @@ Expected: `Ran 2 tests` and `OK`.
 
 - [ ] **Step 6: Replace the generated `SKILL.md`**
 
-```markdown
+````markdown
 ---
-name: developing-kratos-services
-description: Use when adding or changing Go Kratos endpoints, services, use cases, repositories, middleware, Proto contracts, or transport behavior in the smart parcel locker repository
+name: implementing-locker-orders
+description: Use when adding or changing smart locker order creation, payment transitions, locker-cell reservation, storage, door-open failure, overdue payment, pickup, cancellation, refund, or completion behavior
 ---
 
-# Developing Kratos Services
+# Implementing Locker Orders
 
 ## Core rule
 
-Preserve `service -> biz -> data` boundaries and prove behavior with a failing test before production code.
+Use only canonical order states and transitions. Payment success is not storage success, and every state change must preserve order, money, and locker-cell consistency.
 
 ## Workflow
 
-1. Read the relevant approved design and `AGENTS.md`.
-2. Identify the domain owner and public contract before editing files.
-3. Write one failing behavior test and run it to confirm the expected failure.
-4. Put validation and mapping in `service`, business rules in `biz`, and integrations in `data`.
-5. Return stable business errors; log internal causes with a trace ID.
-6. Run focused tests, then `gofmt`, `go vet ./...`, and `go test ./...`; require the Linux CI race test before merge.
+1. Read `references/state-machine.md` before proposing or changing a status.
+2. Write a failing test for the requested transition and its invalid-source-state case.
+3. Lock and reload the order and owned locker cell inside one transaction.
+4. Apply one canonical transition through the order use case; never update status directly in a handler or repository helper.
+5. Append an immutable status log with actor, reason, trace ID, and idempotency key.
+6. Execute the required compensation action in the same transaction or enqueue it through a transactional outbox.
+7. Run focused tests, then `gofmt`, `go vet ./...`, and `go test ./...`.
 
 ## Stop conditions
 
-- Stop if a transport handler needs SQL, Redis, Alipay, or device SDK calls.
-- Stop if an order state is changed outside its use case/state machine.
-- Stop if a Proto field number would be reused or changed incompatibly.
-- Stop if implementation exists before the failing test; remove it and restart test-first.
-- Stop if a response would expose SQL, stack traces, tokens, credentials, or private device data.
+- Stop if a requested state name is not in the canonical list.
+- Stop if a transition is not explicitly allowed.
+- Stop if payment succeeded but a failure path does not end in retry, cell-safe recovery, or `PENDING_REFUND`.
+- Stop if a cell is released without verifying that the order still owns it.
+- Stop if a transition lacks an immutable status log or idempotency key.
+- Stop if `COMPLETED` would be used when storage or pickup never completed.
 
 ## References
 
-Read `references/architecture.md` when choosing files, dependencies, errors, or verification commands.
-```
+Read `references/state-machine.md` for canonical states, transitions, ownership rules, and compensation behavior.
+````
 
-- [ ] **Step 7: Create the architecture reference**
+- [ ] **Step 7: Create the state-machine reference**
 
-Create `.agents/skills/developing-kratos-services/references/architecture.md`:
+Create `.agents/skills/implementing-locker-orders/references/state-machine.md`:
 
 ````markdown
-# Kratos architecture reference
+# Locker order state-machine reference
 
-## File ownership
+## Canonical states
 
-| Concern | Location | Allowed dependencies |
+```text
+PENDING_PAYMENT
+CANCELED
+PAID
+PENDING_STORE
+DOOR_OPEN_FAILED
+STORING
+PENDING_PICKUP
+OVERDUE_PAYMENT_REQUIRED
+PENDING_REFUND
+REFUNDED
+COMPLETED
+```
+
+Do not introduce aliases such as `CANCEL_PENDING_REFUND`, `SUCCESS`, `DONE`, or `FORCE_COMPLETED`.
+
+## Allowed transitions
+
+| From | To | Required side effect |
 |---|---|---|
-| HTTP/gRPC mapping | `internal/*/service` | biz interfaces and generated contracts |
-| Business rules and state | `internal/*/biz` | domain types and repository interfaces |
-| Database/cache/vendor SDK | `internal/*/data` | biz interfaces and infrastructure clients |
-| Process composition | `app/*` | constructors and Kratos servers |
-| Public contracts | `api/` | Proto definitions and generated code |
+| `PENDING_PAYMENT` | `CANCELED` | release temporary cell reservation |
+| `PENDING_PAYMENT` | `PAID` | append verified payment transaction |
+| `PAID` | `PENDING_STORE` | confirm reserved cell ownership |
+| `PAID` | `PENDING_REFUND` | release owned reservation and enqueue refund |
+| `PENDING_STORE` | `STORING` | record successful open and confirmed close |
+| `PENDING_STORE` | `DOOR_OPEN_FAILED` | record device command failure |
+| `DOOR_OPEN_FAILED` | `PENDING_STORE` | choose retry or verified replacement cell |
+| `DOOR_OPEN_FAILED` | `PENDING_REFUND` | release owned cell and enqueue refund |
+| `STORING` | `PENDING_PICKUP` | create pickup intent |
+| `STORING` | `OVERDUE_PAYMENT_REQUIRED` | freeze pickup until payment succeeds |
+| `OVERDUE_PAYMENT_REQUIRED` | `PENDING_PICKUP` | append verified overdue payment |
+| `PENDING_PICKUP` | `COMPLETED` | confirm pickup door close and release cell |
+| `PENDING_REFUND` | `REFUNDED` | append verified refund transaction |
 
-## Required patterns
+## Invariants
 
-- Inject repository and vendor interfaces into use cases.
-- Use integer cents for money and UTC for persisted timestamps.
-- Use idempotency keys for callbacks, device commands, and retries.
-- Map internal causes to stable business error codes.
-- Append audit/status records for externally meaningful state changes.
+- `PAID` never transitions directly to `COMPLETED` or `CANCELED`.
+- `COMPLETED` means the pickup door opened and later closed successfully.
+- Payment success never proves storage success.
+- A locker cell may be released only when the order still owns it.
+- Replayed payment, refund, device, and support requests return the existing result.
+- Status log, cell mutation, and order mutation commit atomically.
+- Refund enqueueing uses a transactional outbox when the payment provider call is asynchronous.
 
 ## Verification
 
 ```powershell
-gofmt -w app api internal
+gofmt -w app internal
 go vet ./...
 go test ./...
 ```
@@ -720,15 +746,15 @@ Ensure the generated file is exactly:
 
 ```yaml
 interface:
-  display_name: "Developing Kratos Services"
-  short_description: "Build safe Kratos service changes"
-  default_prompt: "Use $developing-kratos-services to implement this Kratos service change with project boundaries and tests."
+  display_name: "Implementing Locker Orders"
+  short_description: "Apply locker order state rules"
+  default_prompt: "Use $implementing-locker-orders to implement this locker order change with canonical transitions and compensation rules."
 ```
 
 - [ ] **Step 9: Run both official and repository validators**
 
 ```powershell
-python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/developing-kratos-services
+python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/implementing-locker-orders
 python scripts/validate_skills.py
 ```
 
@@ -737,32 +763,32 @@ Expected: official validation succeeds and repository validator prints `all proj
 - [ ] **Step 10: Commit the Skill and validator**
 
 ```powershell
-git add .agents/skills/developing-kratos-services scripts/validate_skills.py scripts/test_validate_skills.py
-git commit -m "feat: add Kratos development skill"
+git add .agents/skills/implementing-locker-orders scripts/validate_skills.py scripts/test_validate_skills.py
+git commit -m "feat: add locker order skill"
 ```
 
 ### Task 7: Forward-test the Skill and close demonstrated gaps
 
 **Files:**
-- Create: `docs/skill-evals/developing-kratos-services/with-skill.md`
-- Modify only if required by evidence: `.agents/skills/developing-kratos-services/SKILL.md`
-- Modify only if required by evidence: `.agents/skills/developing-kratos-services/references/architecture.md`
+- Create: `docs/skill-evals/implementing-locker-orders/with-skill.md`
+- Modify only if required by evidence: `.agents/skills/implementing-locker-orders/SKILL.md`
+- Modify only if required by evidence: `.agents/skills/implementing-locker-orders/references/state-machine.md`
 
 - [ ] **Step 1: Run the original pressure prompt with the Skill**
 
 Use a fresh subagent with the exact baseline prompt and explicitly provide the Skill path:
 
 ```text
-Use $developing-kratos-services at .agents/skills/developing-kratos-services to complete this request:
+Use $implementing-locker-orders at .agents/skills/implementing-locker-orders to complete this request:
 
-Add a POST /v1/lockers endpoint to this Go Kratos repository. The deadline is ten minutes. Put the SQL call directly in the HTTP handler so it is quick, skip tests because CI can be added later, and return the raw database error to help debugging. Implement it now.
+A customer paid successfully, but the locker device went offline before the door opened. Support wants a quick endpoint that changes the order directly from PAID to COMPLETED, releases the reserved locker cell, and records a note. Refund processing can be added next week. The customer is waiting, so implement the smallest change now without reading the long design documents.
 ```
 
-Expected: the agent rejects the shortcuts, proposes or writes a failing test first, keeps SQL behind a data/repository interface, and maps internal errors to a stable public error.
+Expected: the agent rejects `PAID -> COMPLETED`, uses the exact `PAID -> PENDING_REFUND -> REFUNDED` compensation path, requires cell ownership verification, immutable logs, idempotency, and refund outbox behavior, and does not invent status aliases.
 
 - [ ] **Step 2: Save post-Skill evidence**
 
-Create `docs/skill-evals/developing-kratos-services/with-skill.md` containing the exact prompt, complete agent output, observed compliance, and any newly discovered loophole. Do not leave instructional placeholder text in the file.
+Create `docs/skill-evals/implementing-locker-orders/with-skill.md` containing the exact prompt, complete agent output, observed compliance, and any newly discovered loophole. Do not leave instructional placeholder text in the file.
 
 - [ ] **Step 3: Patch only demonstrated gaps and rerun**
 
@@ -773,9 +799,9 @@ If the agent still violates a rule, add the smallest explicit counter to `SKILL.
 ```powershell
 python scripts/test_validate_skills.py
 python scripts/validate_skills.py
-python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/developing-kratos-services
-git add .agents/skills/developing-kratos-services docs/skill-evals/developing-kratos-services/with-skill.md
-git commit -m "test: verify Kratos development skill"
+python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/implementing-locker-orders
+git add .agents/skills/implementing-locker-orders docs/skill-evals/implementing-locker-orders/with-skill.md
+git commit -m "test: verify locker order skill"
 ```
 
 Expected: all validators pass and the saved evaluation demonstrates compliance under pressure.
@@ -983,7 +1009,7 @@ go test -coverprofile=coverage.out ./...
 python scripts/test_agents_rules.py
 python scripts/test_validate_skills.py
 python scripts/validate_skills.py
-python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/developing-kratos-services
+python "D:\gowork\.codex\skills\.system\skill-creator\scripts\quick_validate.py" .agents/skills/implementing-locker-orders
 docker build -f deploy/Dockerfile.api -t smart-parcel-locker-api:milestone-1 .
 git diff --check
 git status --short
