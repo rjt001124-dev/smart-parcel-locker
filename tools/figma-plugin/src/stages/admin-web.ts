@@ -9,10 +9,12 @@ export async function runAdminWeb(port: FigmaPort): Promise<RunReport> {
   const page = PAGE_KEYS[2];
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
-  for (const screen of ADMIN_SCREENS) {
+  for (const [index, screen] of ADMIN_SCREENS.entries()) {
     report = recordResult(report, await port.upsertScreen({
       ...screen,
       pageKey: page.key,
+      x: 80 + (index % 3) * 1520,
+      y: 80 + Math.floor(index / 3) * 980,
       navigationTheme: "dark",
       contentTheme: "light",
       layout: { direction: "HORIZONTAL", gap: 0, padding: 0 },
@@ -23,12 +25,12 @@ export async function runAdminWeb(port: FigmaPort): Promise<RunReport> {
 
   report = recordResult(report, await port.upsertScreen({
     key: "screen/admin/permission-denied", name: "Admin / Permission Denied", pageKey: page.key,
-    width: 1440, height: 900, navigationTheme: "dark", contentTheme: "light",
+    width: 1440, height: 900, x: 80, y: 3040, navigationTheme: "dark", contentTheme: "light",
     actions: ["return", "request-permission"]
   }));
   report = recordResult(report, await port.upsertScreen({
     key: "screen/admin/risk-confirmations", name: "Admin / High-risk Confirmations", pageKey: page.key,
-    width: 1440, height: 900, navigationTheme: "dark", contentTheme: "light",
+    width: 1440, height: 900, x: 1600, y: 3040, navigationTheme: "dark", contentTheme: "light",
     actions: ["remote-open", "restart", "isolate", "rollback"],
     fields: ["device", "reason", "risk-warning", "audit-notice"],
     requiresSecondConfirmation: true

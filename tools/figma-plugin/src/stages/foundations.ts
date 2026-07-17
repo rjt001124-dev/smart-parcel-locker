@@ -60,7 +60,8 @@ export async function runFoundations(port: FigmaPort): Promise<RunReport> {
 
   report = recordResult(report, await port.upsertScreen({
     key: "screen/foundations/documentation", name: "Foundations / Documentation", pageKey: page.key,
-    width: 1440, height: 1800, sections: ["Principles", "Color", "Typography", "Spacing", "Radius", "Effects", "Icons", "States"]
+    width: 1440, height: 1800, x: 80, y: 80,
+    sections: ["Principles", "Color", "Typography", "Spacing", "Radius", "Effects", "Icons", "States"]
   }));
 
   if (report.status === "success") await port.setStageMarker("foundations");

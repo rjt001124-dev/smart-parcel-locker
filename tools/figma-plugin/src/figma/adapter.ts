@@ -113,7 +113,7 @@ export class RealFigmaAdapter implements FigmaPort {
     if (!component) { const sameName = page.findAllWithCriteria({ types: ["COMPONENT"] }).find((item) => item.name === spec.name); if (sameName) return result(spec.key, "conflict", sameName.id); component = figma.createComponent(); mark(component, spec.key); page.appendChild(component); outcome = "created"; }
     component.name = spec.name; component.resize(240, 72); component.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }]; component.cornerRadius = 8;
     await this.ensureLabel(component, spec.name);
-    this.placeOnPage(page, component);
+    this.positionNode(page, component, spec);
     return result(spec.key, outcome, component.id);
   }
 
@@ -124,7 +124,10 @@ export class RealFigmaAdapter implements FigmaPort {
     let outcome: ResourceResult["outcome"] = "updated";
     if (!frame) { const sameName = page.findAllWithCriteria({ types: ["FRAME"] }).find((item) => item.name === spec.name); if (sameName) return result(spec.key, "conflict", sameName.id); frame = figma.createFrame(); mark(frame, spec.key); page.appendChild(frame); outcome = "created"; }
     frame.name = spec.name; frame.resize(Number(spec.width), Number(spec.height)); frame.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.98, b: 1 } }]; frame.clipsContent = true;
-    await this.ensureLabel(frame, spec.name); this.placeOnPage(page, frame);
+    frame.layoutMode = "VERTICAL"; frame.primaryAxisSizingMode = "FIXED"; frame.counterAxisSizingMode = "FIXED";
+    frame.paddingTop = 24; frame.paddingBottom = 24; frame.paddingLeft = 24; frame.paddingRight = 24; frame.itemSpacing = 16;
+    await this.ensureLabel(frame, spec.name); await this.ensureSections(frame, (spec.sections as readonly string[] | undefined) ?? (spec.states as readonly string[] | undefined) ?? []);
+    this.positionNode(page, frame, spec);
     return result(spec.key, outcome, frame.id);
   }
 
@@ -135,9 +138,23 @@ export class RealFigmaAdapter implements FigmaPort {
     await figma.loadFontAsync({ family: "Inter", style: "Semi Bold" });
     let label = parent.children.find((child): child is TextNode => child.type === "TEXT" && child.name === "Generated Label");
     if (!label) { label = figma.createText(); label.name = "Generated Label"; parent.appendChild(label); }
-    label.fontName = { family: "Inter", style: "Semi Bold" }; label.fontSize = 16; label.characters = text; label.x = 24; label.y = 24;
+    label.fontName = { family: "Inter", style: "Semi Bold" }; label.fontSize = 16; label.characters = text;
+    if (!("layoutMode" in parent) || parent.layoutMode === "NONE") { label.x = 24; label.y = 24; }
   }
-  private placeOnPage(page: PageNode, node: SceneNode): void {
+  private async ensureSections(parent: FrameNode, sections: readonly string[]): Promise<void> {
+    for (const child of [...parent.children]) if (child.name.startsWith("Generated Section/")) child.remove();
+    await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+    for (const [index, sectionName] of sections.entries()) {
+      const section = figma.createFrame(); section.name = `Generated Section/${sectionName}`;
+      section.resize(Math.max(240, parent.width - 48), parent.width < 500 ? 72 : 112);
+      section.fills = [{ type: "SOLID", color: index % 2 === 0 ? { r: 1, g: 1, b: 1 } : { r: 0.9, g: 0.95, b: 1 } }]; section.cornerRadius = 12;
+      section.layoutMode = "VERTICAL"; section.paddingTop = 16; section.paddingBottom = 16; section.paddingLeft = 16; section.paddingRight = 16;
+      const text = figma.createText(); text.fontName = { family: "Inter", style: "Regular" }; text.fontSize = 14; text.characters = sectionName; section.appendChild(text); parent.appendChild(section);
+      section.layoutSizingHorizontal = "FILL";
+    }
+  }
+  private positionNode(page: PageNode, node: SceneNode, spec: ResourceSpec): void {
+    if (typeof spec.x === "number" && typeof spec.y === "number") { node.x = spec.x; node.y = spec.y; return; }
     const others = page.children.filter((item) => item.id !== node.id && "x" in item) as SceneNode[];
     const right = others.reduce((max, item) => Math.max(max, item.x + item.width), 0);
     if (node.x === 0 && node.y === 0) { node.x = right + 80; node.y = 80; }

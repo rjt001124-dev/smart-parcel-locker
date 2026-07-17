@@ -35,11 +35,13 @@ export async function runComponents(port: FigmaPort): Promise<RunReport> {
   const page = PAGE_KEYS[0];
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
-  for (const key of COMPONENT_KEYS) {
+  for (const [index, key] of COMPONENT_KEYS.entries()) {
     report = recordResult(report, await port.upsertComponentFamily({
       key: `component/${key}`,
       name: DISPLAY_NAMES[key],
       pageKey: page.key,
+      x: 1600 + (index % 4) * 300,
+      y: 80 + Math.floor(index / 4) * 140,
       variants: variantsFor(key),
       layout: { direction: "HORIZONTAL", gap: 12, padding: 12 },
       tokens: ["color/action/primary", "color/text/primary", "space/12", "radius/8"]
