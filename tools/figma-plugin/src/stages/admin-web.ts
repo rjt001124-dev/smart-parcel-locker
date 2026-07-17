@@ -2,6 +2,7 @@ import { ADMIN_SCREENS, PAGE_KEYS } from "../domain/catalog";
 import { createRunReport, recordResult, type RunReport } from "../domain/run-report";
 import type { FigmaPort } from "../figma/port";
 import { assertStageReady } from "./dependencies";
+import { adminScreenSections } from "../domain/screen-content";
 
 export async function runAdminWeb(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "admin-web");
@@ -18,7 +19,7 @@ export async function runAdminWeb(port: FigmaPort): Promise<RunReport> {
       navigationTheme: "dark",
       contentTheme: "light",
       layout: { direction: "HORIZONTAL", gap: 0, padding: 0 },
-      sections: ["Admin Sidebar", "Admin Header", "Filters", "Primary Data", "Pagination"],
+      sections: adminScreenSections(screen.key),
       componentRefs: ["component/admin-sidebar", "component/admin-header", "component/filter-bar", "component/data-table", "component/pagination"]
     }));
   }

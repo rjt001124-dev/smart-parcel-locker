@@ -2,6 +2,7 @@ import { MINI_APP_SCREENS, PAGE_KEYS, REQUIRED_STATES } from "../domain/catalog"
 import { createRunReport, recordResult, type RunReport } from "../domain/run-report";
 import type { FigmaPort } from "../figma/port";
 import { assertStageReady } from "./dependencies";
+import { miniAppScreenSections, stateDescription } from "../domain/screen-content";
 
 export async function runMiniApp(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "mini-app");
@@ -16,14 +17,14 @@ export async function runMiniApp(port: FigmaPort): Promise<RunReport> {
       x: 80 + (index % 5) * 455,
       y: 80 + Math.floor(index / 5) * 892,
       layout: { direction: "VERTICAL", gap: 16, padding: 16 },
-      sections: ["Status Bar", "Top Bar", "Primary Content", "Context Actions", "Bottom Navigation"],
+      sections: miniAppScreenSections(screen.key),
       componentRefs: ["component/miniapp-top-bar", "component/button", "component/card", "component/miniapp-bottom-tab-bar"]
     }));
   }
 
   report = recordResult(report, await port.upsertScreen({
     key: "screen/miniapp/state-matrix", name: "Mini App / State Matrix", pageKey: page.key,
-    width: 1600, height: 1200, x: 80, y: 2850, states: REQUIRED_STATES,
+    width: 1600, height: 2200, x: 80, y: 2850, states: REQUIRED_STATES.map(stateDescription),
     componentRefs: ["component/alert", "component/result", "component/empty-state", "component/error-state"]
   }));
   if (report.status === "success") await port.setStageMarker("mini-app");

@@ -29,6 +29,19 @@ function variantsFor(key: (typeof COMPONENT_KEYS)[number]): readonly Record<stri
   return [{ State: "Default" }];
 }
 
+function visualSpec(key: (typeof COMPONENT_KEYS)[number]): { width: number; height: number; visualKind: string } {
+  if (key === "button") return { width: 160, height: 48, visualKind: "button" };
+  if (key === "icon-button") return { width: 48, height: 48, visualKind: "icon-button" };
+  if (["input", "search", "select"].includes(key)) return { width: 320, height: 96, visualKind: key };
+  if (["site-card", "locker-size-card", "order-card", "card"].includes(key)) return { width: 360, height: 180, visualKind: key };
+  if (key === "data-table") return { width: 640, height: 280, visualKind: "data-table" };
+  if (["admin-header", "filter-bar"].includes(key)) return { width: 640, height: 96, visualKind: key };
+  if (key === "admin-sidebar") return { width: 240, height: 360, visualKind: key };
+  if (["modal", "bottom-sheet", "confirm-dialog"].includes(key)) return { width: 420, height: 240, visualKind: key };
+  if (["miniapp-top-bar", "miniapp-bottom-tab-bar"].includes(key)) return { width: 375, height: 80, visualKind: key };
+  return { width: 280, height: 112, visualKind: key };
+}
+
 export async function runComponents(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "components");
   let report = createRunReport("components");
@@ -36,12 +49,14 @@ export async function runComponents(port: FigmaPort): Promise<RunReport> {
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
   for (const [index, key] of COMPONENT_KEYS.entries()) {
+    const visual = visualSpec(key);
     report = recordResult(report, await port.upsertComponentFamily({
       key: `component/${key}`,
       name: DISPLAY_NAMES[key],
       pageKey: page.key,
-      x: 1600 + (index % 4) * 300,
-      y: 80 + Math.floor(index / 4) * 140,
+      x: 1600 + (index % 2) * 720,
+      y: 80 + Math.floor(index / 2) * 340,
+      ...visual,
       variants: variantsFor(key),
       layout: { direction: "HORIZONTAL", gap: 12, padding: 12 },
       tokens: ["color/action/primary", "color/text/primary", "space/12", "radius/8"]
