@@ -1,39 +1,35 @@
 {
   "runId": "figma-baseline-2026-07-17",
-  "status": "blocked_mcp_rate_limit",
-  "file": {
-    "name": "Smart Parcel Locker / 智能快递柜",
+  "status": "local_plugin_ready_for_final_run",
+  "initialMcpFile": {
     "fileKey": "ui9lT54QlghpCFiYxiB6WT",
     "url": "https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT",
-    "editorType": "design"
+    "note": "Created through MCP under the earlier authenticated account; not the active local-plugin file."
   },
-  "account": {
-    "handle": "rjt666",
-    "team": "Loera Maaske's team",
-    "planKey": "team::1646437779906104624",
-    "tier": "starter",
-    "seat": "View"
+  "activeLocalFile": {
+    "name": "智能快递柜",
+    "fileKey": null,
+    "url": null,
+    "editorType": "design",
+    "teamTier": "starter"
   },
-  "discovery": {
-    "librariesAdded": [
-      "Material 3 Design Kit",
-      "Simple Design System"
-    ],
-    "preferredLibrary": "Simple Design System",
-    "searchCompleted": false,
-    "blocker": "Figma MCP Starter plan tool call limit"
+  "generator": {
+    "path": "tools/figma-plugin",
+    "pageLimit": 3,
+    "stages": ["foundations", "components", "mini-app", "admin-web"],
+    "automatedVerification": "passed",
+    "finalFigmaRunRequired": true
   },
-  "pages": {},
-  "collections": {},
-  "styles": {},
-  "components": {},
-  "screens": {
-    "miniApp": {},
-    "adminWeb": {}
+  "expected": {
+    "pages": ["00 Design System", "01 Mini App", "02 Admin Web"],
+    "componentFamilies": 25,
+    "miniAppScreens": 13,
+    "adminScreens": 9,
+    "requiredStates": 12
   },
   "qa": {
-    "metadata": {},
-    "screenshots": {},
+    "checklist": "docs/design/figma-qa.md",
+    "finalRunCompleted": false,
     "approved": false
   }
 }
