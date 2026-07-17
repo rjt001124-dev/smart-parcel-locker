@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implementing Locker Orders"
+  short_description: "Apply locker order state rules"
+  default_prompt: "Use $implementing-locker-orders to implement this locker order change with canonical transitions and compensation rules."
