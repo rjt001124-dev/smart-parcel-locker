@@ -3,6 +3,7 @@ import type { ResourceResult } from "../domain/run-report";
 import { normalizeColor, sectionVisualSpec, toVariableScopes } from "./adapter-helpers";
 import type { FigmaPort, FontDescriptor, ResourceSpec } from "./port";
 import type { Stage } from "../domain/catalog";
+import { FOUNDATION_SECTIONS, foundationItems, type FoundationSection } from "../domain/foundation-content";
 
 const NS = OWNERSHIP.namespace;
 
@@ -152,7 +153,28 @@ export class RealFigmaAdapter implements FigmaPort {
       section.fills = [{ type: "SOLID", color: visual.fill }]; section.strokes = [{ type: "SOLID", color: visual.stroke }]; section.strokeWeight = visual.strokeWeight; section.cornerRadius = 12;
       parent.appendChild(section); section.resize(Math.max(240, parent.width - 48), visual.height); section.layoutSizingHorizontal = "FILL"; section.layoutSizingVertical = "FIXED";
       const text = figma.createText(); text.fontName = { family: "Inter", style: "Regular" }; text.fontSize = 18; text.characters = sectionName; text.fills = [{ type: "SOLID", color: { r: 0.06, g: 0.16, b: 0.3 } }]; section.appendChild(text);
+      if ((FOUNDATION_SECTIONS as readonly string[]).includes(sectionName)) await this.addFoundationExamples(section, sectionName as FoundationSection);
     }
+  }
+  private async addFoundationExamples(section: FrameNode, sectionName: FoundationSection): Promise<void> {
+    await figma.loadFontAsync({ family: "Inter", style: "Medium" });
+    const row = figma.createFrame(); row.name = `Generated Examples/${sectionName}`; row.layoutMode = "HORIZONTAL"; row.itemSpacing = 12; row.fills = [];
+    section.appendChild(row); row.layoutSizingHorizontal = "FILL"; row.layoutSizingVertical = "HUG";
+    for (const item of foundationItems(sectionName)) {
+      const card = figma.createFrame(); card.name = `Example/${item.label}`; card.layoutMode = "VERTICAL"; card.primaryAxisSizingMode = "FIXED"; card.counterAxisSizingMode = "FIXED";
+      card.resize(sectionName === "设计原则" ? 260 : 150, 74); card.paddingTop = 12; card.paddingBottom = 12; card.paddingLeft = 12; card.paddingRight = 12; card.itemSpacing = 6; card.cornerRadius = item.kind === "radius" ? Math.min(Number(item.value), 36) : 8;
+      card.fills = [{ type: "SOLID", color: item.color ? this.hexColor(item.color) : { r: 0.95, g: 0.97, b: 1 } }];
+      if (item.kind === "shadow") card.effects = [{ type: "DROP_SHADOW", color: { r: 0.06, g: 0.09, b: 0.16, a: 0.16 }, offset: { x: 0, y: 6 }, radius: Number(item.value), spread: 0, visible: true, blendMode: "NORMAL" }];
+      row.appendChild(card);
+      const label = figma.createText(); label.fontName = { family: "Inter", style: "Medium" }; label.fontSize = item.kind === "text" && item.value ? Math.min(item.value, 24) : 14; label.characters = item.label;
+      label.fills = [{ type: "SOLID", color: item.color ? { r: 1, g: 1, b: 1 } : { r: 0.06, g: 0.16, b: 0.3 } }]; card.appendChild(label);
+      if (item.description) { const detail = figma.createText(); detail.fontName = { family: "Inter", style: "Regular" }; detail.fontSize = 11; detail.characters = item.description; detail.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.44, b: 0.52 } }]; card.appendChild(detail); }
+      if (item.kind === "spacing") { const bar = figma.createRectangle(); bar.resize(Math.max(8, Number(item.value) * 3), 8); bar.cornerRadius = 4; bar.fills = [{ type: "SOLID", color: { r: 0.09, g: 0.47, b: 1 } }]; card.appendChild(bar); }
+    }
+  }
+  private hexColor(hex: string): RGB {
+    const value = hex.replace("#", "");
+    return { r: Number.parseInt(value.slice(0, 2), 16) / 255, g: Number.parseInt(value.slice(2, 4), 16) / 255, b: Number.parseInt(value.slice(4, 6), 16) / 255 };
   }
   private positionNode(page: PageNode, node: SceneNode, spec: ResourceSpec): void {
     if (typeof spec.x === "number" && typeof spec.y === "number") { node.x = spec.x; node.y = spec.y; return; }

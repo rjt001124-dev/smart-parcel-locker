@@ -2,6 +2,7 @@ import { PAGE_KEYS } from "../domain/catalog";
 import { createRunReport, recordResult, type RunReport } from "../domain/run-report";
 import { COLOR_TOKENS, DIMENSION_TOKENS, tokenCssSyntax } from "../domain/tokens";
 import type { FigmaPort, ResourceSpec } from "../figma/port";
+import { FOUNDATION_SECTIONS } from "../domain/foundation-content";
 
 const REQUIRED_FONTS = [
   { family: "Inter", style: "Regular" },
@@ -61,7 +62,7 @@ export async function runFoundations(port: FigmaPort): Promise<RunReport> {
   report = recordResult(report, await port.upsertScreen({
     key: "screen/foundations/documentation", name: "Foundations / Documentation", pageKey: page.key,
     width: 1440, height: 1800, x: 80, y: 80,
-    sections: ["Principles", "Color", "Typography", "Spacing", "Radius", "Effects", "Icons", "States"]
+    sections: FOUNDATION_SECTIONS
   }));
 
   if (report.status === "success") await port.setStageMarker("foundations");
