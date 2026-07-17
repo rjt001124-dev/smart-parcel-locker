@@ -46,5 +46,6 @@ export class FakeFigmaPort implements FigmaPort {
   async focusPage(_key: string): Promise<void> {}
 
   resourceCount(): number { return this.resources.size; }
+  resource(key: string): ResourceSpec | undefined { return this.resources.get(key); }
   componentKeys(): string[] { return [...this.resources.keys()].filter((key) => key.startsWith("component/")); }
 }
