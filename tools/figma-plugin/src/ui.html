@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart Parcel Locker Generator</title>
+  </head>
+  <body>
+    <main>
+      <h1>智能快递柜设计生成器</h1>
+      <p>插件脚手架已加载。后续阶段将在这里提供生成操作。</p>
+      <button id="close" type="button">关闭</button>
+    </main>
+    <script>
+      document.getElementById("close").onclick = () => {
+        parent.postMessage({ pluginMessage: { type: "close-plugin" } }, "*");
+      };
+    </script>
+  </body>
+</html>
