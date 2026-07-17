@@ -1,0 +1,39 @@
+{
+  "runId": "figma-baseline-2026-07-17",
+  "status": "blocked_mcp_rate_limit",
+  "file": {
+    "name": "Smart Parcel Locker / 智能快递柜",
+    "fileKey": "ui9lT54QlghpCFiYxiB6WT",
+    "url": "https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT",
+    "editorType": "design"
+  },
+  "account": {
+    "handle": "rjt666",
+    "team": "Loera Maaske's team",
+    "planKey": "team::1646437779906104624",
+    "tier": "starter",
+    "seat": "View"
+  },
+  "discovery": {
+    "librariesAdded": [
+      "Material 3 Design Kit",
+      "Simple Design System"
+    ],
+    "preferredLibrary": "Simple Design System",
+    "searchCompleted": false,
+    "blocker": "Figma MCP Starter plan tool call limit"
+  },
+  "pages": {},
+  "collections": {},
+  "styles": {},
+  "components": {},
+  "screens": {
+    "miniApp": {},
+    "adminWeb": {}
+  },
+  "qa": {
+    "metadata": {},
+    "screenshots": {},
+    "approved": false
+  }
+}
