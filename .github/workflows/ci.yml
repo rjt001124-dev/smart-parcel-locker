@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+          cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l app internal)"
+
+      - name: Verify Go code
+        run: |
+          go mod verify
+          go vet ./...
+          go test -race -coverprofile=coverage.out ./...
+
+      - name: Verify project rules and Skills
+        run: |
+          python scripts/test_agents_rules.py
+          python scripts/test_validate_skills.py
+          python scripts/validate_skills.py
+
+      - name: Build API image
+        run: docker build -f deploy/Dockerfile.api -t smart-parcel-locker-api:ci .
