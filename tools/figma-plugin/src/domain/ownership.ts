@@ -1,5 +1,5 @@
 export const OWNERSHIP = {
-  namespace: "smart-parcel-locker",
+  namespace: "smart_parcel_locker",
   owner: "local-figma-generator",
   schemaVersion: "1"
 } as const;
