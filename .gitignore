@@ -27,6 +27,16 @@ go.work.sum
 # env file
 .env
 
+# Python caches used by repository validation scripts
+__pycache__/
+*.py[cod]
+
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Local brainstorming companion artifacts
+.superpowers/
+
+# Isolated implementation worktrees
+.worktrees/
