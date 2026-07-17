@@ -32,7 +32,7 @@ function variantsFor(key: (typeof COMPONENT_KEYS)[number]): readonly Record<stri
 export async function runComponents(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "components");
   let report = createRunReport("components");
-  const page = PAGE_KEYS[1];
+  const page = PAGE_KEYS[0];
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
   for (const key of COMPONENT_KEYS) {

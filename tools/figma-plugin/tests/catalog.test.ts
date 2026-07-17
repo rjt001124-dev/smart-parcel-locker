@@ -15,12 +15,8 @@ describe("design catalog", () => {
   });
 
   it("covers required pages and screen sizes", () => {
-    expect(PAGE_KEYS.map((item) => item.name)).toEqual([
-      "00 Foundations",
-      "01 Components",
-      "02 Mini App",
-      "03 Admin Web"
-    ]);
+    expect(PAGE_KEYS.map((item) => item.name)).toEqual(["00 Design System", "01 Mini App", "02 Admin Web"]);
+    expect(PAGE_KEYS.length).toBeLessThanOrEqual(3);
     expect(MINI_APP_SCREENS.every((item) => item.width === 375 && item.height === 812)).toBe(true);
     expect(ADMIN_SCREENS.every((item) => item.width === 1440 && item.height === 900)).toBe(true);
   });

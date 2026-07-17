@@ -6,7 +6,7 @@ import { assertStageReady } from "./dependencies";
 export async function runAdminWeb(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "admin-web");
   let report = createRunReport("admin-web");
-  const page = PAGE_KEYS[3];
+  const page = PAGE_KEYS[2];
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
   for (const screen of ADMIN_SCREENS) {

@@ -29,6 +29,12 @@ export class RealFigmaAdapter implements FigmaPort {
   async upsertPage(spec: ResourceSpec): Promise<ResourceResult> {
     const byKey = figma.root.children.find((page) => owned(page, spec.key));
     if (byKey) { byKey.name = spec.name; return result(spec.key, "updated", byKey.id); }
+    if (spec.key === "page/design-system" && figma.root.children.length === 1 && figma.root.children[0].name === "Page 1") {
+      const initialPage = figma.root.children[0];
+      initialPage.name = spec.name;
+      mark(initialPage, spec.key);
+      return result(spec.key, "updated", initialPage.id, "Reused the initial free-plan page");
+    }
     const sameName = figma.root.children.find((page) => page.name === spec.name);
     if (sameName) return result(spec.key, "conflict", sameName.id, `Unowned page already exists: ${spec.name}`);
     const page = figma.createPage(); page.name = spec.name; mark(page, spec.key);

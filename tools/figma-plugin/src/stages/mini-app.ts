@@ -6,7 +6,7 @@ import { assertStageReady } from "./dependencies";
 export async function runMiniApp(port: FigmaPort): Promise<RunReport> {
   await assertStageReady(port, "mini-app");
   let report = createRunReport("mini-app");
-  const page = PAGE_KEYS[2];
+  const page = PAGE_KEYS[1];
   report = recordResult(report, await port.upsertPage({ key: page.key, name: page.name }));
 
   for (const screen of MINI_APP_SCREENS) {

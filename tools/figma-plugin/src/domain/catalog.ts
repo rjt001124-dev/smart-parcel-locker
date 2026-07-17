@@ -13,10 +13,9 @@ export interface ScreenCatalogItem {
 }
 
 export const PAGE_KEYS: readonly PageCatalogItem[] = [
-  { key: "page/foundations", name: "00 Foundations" },
-  { key: "page/components", name: "01 Components" },
-  { key: "page/mini-app", name: "02 Mini App" },
-  { key: "page/admin-web", name: "03 Admin Web" }
+  { key: "page/design-system", name: "00 Design System" },
+  { key: "page/mini-app", name: "01 Mini App" },
+  { key: "page/admin-web", name: "02 Admin Web" }
 ];
 
 export const COMPONENT_KEYS = [
