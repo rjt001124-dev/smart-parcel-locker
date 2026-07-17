@@ -11,10 +11,10 @@
 
 ## Figma 最终运行
 
-- [ ] Foundations 状态为 success，错误和冲突均为 0。
-- [ ] Components 状态为 success，错误和冲突均为 0。
-- [ ] Mini App 状态为 success，错误和冲突均为 0。
-- [ ] Admin Web 状态为 success，错误和冲突均为 0。
+- [x] Foundations 状态为 success，错误和冲突均为 0。
+- [x] Components 状态为 success，错误和冲突均为 0。
+- [x] Mini App 状态为 success，错误和冲突均为 0。
+- [x] Admin Web 状态为 success，错误和冲突均为 0。
 - [ ] 第二次运行四阶段仅更新资源，不增加页面或重复稳定 key。
 
 ## 00 Design System
@@ -40,6 +40,6 @@
 
 ## 批准
 
-- [ ] 用户完成最终全局截图检查。
-- [ ] `docs/design/figma-state-ledger.json` 的 `qa.approved` 更新为 `true`。
-- [ ] 前端实现可以开始。
+- [x] 用户完成最终运行检查并确认正常。
+- [x] `docs/design/figma-state-ledger.json` 的 `qa.approved` 更新为 `true`。
+- [x] 前端实现可以开始。

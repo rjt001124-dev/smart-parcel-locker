@@ -1,6 +1,6 @@
 {
   "runId": "figma-baseline-2026-07-17",
-  "status": "local_plugin_ready_for_final_run",
+  "status": "local_plugin_generated_and_approved",
   "initialMcpFile": {
     "fileKey": "ui9lT54QlghpCFiYxiB6WT",
     "url": "https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT",
@@ -18,7 +18,7 @@
     "pageLimit": 3,
     "stages": ["foundations", "components", "mini-app", "admin-web"],
     "automatedVerification": "passed",
-    "finalFigmaRunRequired": true
+    "finalFigmaRunRequired": false
   },
   "expected": {
     "pages": ["00 Design System", "01 Mini App", "02 Admin Web"],
@@ -29,7 +29,8 @@
   },
   "qa": {
     "checklist": "docs/design/figma-qa.md",
-    "finalRunCompleted": false,
-    "approved": false
+    "finalRunCompleted": true,
+    "approved": true,
+    "approvalEvidence": "User confirmed the final four-stage Figma run was OK and normal on 2026-07-17."
   }
 }
