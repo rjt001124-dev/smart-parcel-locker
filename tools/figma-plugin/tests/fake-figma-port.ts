@@ -5,19 +5,22 @@ import type { FigmaPort, FontDescriptor, ResourceSpec } from "../src/figma/port"
 export class FakeFigmaPort implements FigmaPort {
   private readonly markers = new Set<Stage>();
   private readonly resources = new Map<string, ResourceSpec>();
+  private fonts: readonly FontDescriptor[] = [
+    { family: "Inter", style: "Regular" },
+    { family: "Inter", style: "Medium" },
+    { family: "Inter", style: "Semi Bold" },
+    { family: "Inter", style: "Bold" }
+  ];
 
   async getFileName(): Promise<string> {
     return "Smart Parcel Locker / 智能快递柜";
   }
 
   async listAvailableFonts(): Promise<readonly FontDescriptor[]> {
-    return [
-      { family: "Inter", style: "Regular" },
-      { family: "Inter", style: "Medium" },
-      { family: "Inter", style: "Semi Bold" },
-      { family: "Inter", style: "Bold" }
-    ];
+    return this.fonts;
   }
+
+  setFonts(fonts: readonly FontDescriptor[]): void { this.fonts = fonts; }
 
   async hasStageMarker(stage: Stage): Promise<boolean> {
     return this.markers.has(stage);
