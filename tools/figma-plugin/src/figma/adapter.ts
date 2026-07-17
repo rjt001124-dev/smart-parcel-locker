@@ -1,6 +1,6 @@
 import { OWNERSHIP } from "../domain/ownership";
 import type { ResourceResult } from "../domain/run-report";
-import { normalizeColor, resourceDecision, toVariableScopes } from "./adapter-helpers";
+import { normalizeColor, sectionVisualSpec, toVariableScopes } from "./adapter-helpers";
 import type { FigmaPort, FontDescriptor, ResourceSpec } from "./port";
 import type { Stage } from "../domain/catalog";
 
@@ -146,11 +146,12 @@ export class RealFigmaAdapter implements FigmaPort {
     await figma.loadFontAsync({ family: "Inter", style: "Regular" });
     for (const [index, sectionName] of sections.entries()) {
       const section = figma.createFrame(); section.name = `Generated Section/${sectionName}`;
-      section.resize(Math.max(240, parent.width - 48), parent.width < 500 ? 72 : 112);
-      section.fills = [{ type: "SOLID", color: index % 2 === 0 ? { r: 1, g: 1, b: 1 } : { r: 0.9, g: 0.95, b: 1 } }]; section.cornerRadius = 12;
-      section.layoutMode = "VERTICAL"; section.paddingTop = 16; section.paddingBottom = 16; section.paddingLeft = 16; section.paddingRight = 16;
-      const text = figma.createText(); text.fontName = { family: "Inter", style: "Regular" }; text.fontSize = 14; text.characters = sectionName; section.appendChild(text); parent.appendChild(section);
-      section.layoutSizingHorizontal = "FILL";
+      const visual = sectionVisualSpec(parent.width, index);
+      section.layoutMode = "VERTICAL"; section.primaryAxisSizingMode = "FIXED"; section.counterAxisSizingMode = "FIXED";
+      section.paddingTop = 20; section.paddingBottom = 20; section.paddingLeft = 20; section.paddingRight = 20; section.itemSpacing = 12;
+      section.fills = [{ type: "SOLID", color: visual.fill }]; section.strokes = [{ type: "SOLID", color: visual.stroke }]; section.strokeWeight = visual.strokeWeight; section.cornerRadius = 12;
+      parent.appendChild(section); section.resize(Math.max(240, parent.width - 48), visual.height); section.layoutSizingHorizontal = "FILL"; section.layoutSizingVertical = "FIXED";
+      const text = figma.createText(); text.fontName = { family: "Inter", style: "Regular" }; text.fontSize = 18; text.characters = sectionName; text.fills = [{ type: "SOLID", color: { r: 0.06, g: 0.16, b: 0.3 } }]; section.appendChild(text);
     }
   }
   private positionNode(page: PageNode, node: SceneNode, spec: ResourceSpec): void {

@@ -21,3 +21,12 @@ export function resourceDecision(existing: { owner: string; key: string; nameMat
   if (existing.nameMatches) return "conflict";
   return "skip";
 }
+
+export function sectionVisualSpec(parentWidth: number, index: number): { height: number; fill: RGB; stroke: RGB; strokeWeight: number } {
+  return {
+    height: parentWidth < 500 ? 96 : 160,
+    fill: index % 2 === 0 ? { r: 1, g: 1, b: 1 } : { r: 0.9, g: 0.95, b: 1 },
+    stroke: { r: 0.8, g: 0.86, b: 0.94 },
+    strokeWeight: 1
+  };
+}
