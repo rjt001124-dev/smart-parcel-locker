@@ -12,7 +12,10 @@ import (
 var version = "dev"
 
 func main() {
-	cfg := conf.Load(os.Getenv)
+	cfg, err := conf.Load(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
 	httpServer := server.NewHTTPServer(cfg, version)
 
 	app := kratos.New(
@@ -20,7 +23,7 @@ func main() {
 		kratos.Version(version),
 		kratos.Server(httpServer),
 	)
-	if err := app.Run(); err != nil {
+	if err = app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
