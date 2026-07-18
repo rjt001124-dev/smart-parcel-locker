@@ -65,6 +65,7 @@ CREATE TABLE locker_cells (
   UNIQUE KEY uk_locker_cells_device_cell (device_id, cell_no),
   UNIQUE KEY uk_locker_cells_reservation_key (reservation_key),
   KEY idx_locker_cells_allocation (device_id, size, occupancy_status, lock_expires_at),
+  KEY idx_locker_cells_reclaim (occupancy_status, current_order_id, lock_expires_at, id),
   CONSTRAINT fk_locker_cells_device FOREIGN KEY (device_id) REFERENCES locker_devices(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

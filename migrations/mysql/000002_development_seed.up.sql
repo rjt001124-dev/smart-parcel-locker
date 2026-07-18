@@ -1,3 +1,5 @@
+START TRANSACTION;
+
 INSERT INTO cities (id, code, name, province, enabled)
 VALUES (1, '310100', '上海市', '上海市', TRUE);
 
@@ -21,3 +23,5 @@ VALUES
   (2, 'B01', 'MEDIUM', 'IDLE', 'CLOSED'),
   (2, 'B02', 'MEDIUM', 'IDLE', 'CLOSED'),
   (2, 'C01', 'LARGE', 'IDLE', 'CLOSED');
+
+COMMIT;
