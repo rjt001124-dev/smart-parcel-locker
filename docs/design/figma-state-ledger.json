@@ -1,0 +1,36 @@
+{
+  "runId": "figma-baseline-2026-07-17",
+  "status": "local_plugin_generated_and_approved",
+  "initialMcpFile": {
+    "fileKey": "ui9lT54QlghpCFiYxiB6WT",
+    "url": "https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT",
+    "note": "Created through MCP under the earlier authenticated account; not the active local-plugin file."
+  },
+  "activeLocalFile": {
+    "name": "智能快递柜",
+    "fileKey": null,
+    "url": null,
+    "editorType": "design",
+    "teamTier": "starter"
+  },
+  "generator": {
+    "path": "tools/figma-plugin",
+    "pageLimit": 3,
+    "stages": ["foundations", "components", "mini-app", "admin-web"],
+    "automatedVerification": "passed",
+    "finalFigmaRunRequired": false
+  },
+  "expected": {
+    "pages": ["00 Design System", "01 Mini App", "02 Admin Web"],
+    "componentFamilies": 25,
+    "miniAppScreens": 13,
+    "adminScreens": 9,
+    "requiredStates": 12
+  },
+  "qa": {
+    "checklist": "docs/design/figma-qa.md",
+    "finalRunCompleted": true,
+    "approved": true,
+    "approvalEvidence": "User confirmed the final four-stage Figma run was OK and normal on 2026-07-17."
+  }
+}
