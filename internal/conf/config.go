@@ -36,20 +36,32 @@ func Load(getenv func(string) string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	if mysqlPort < 1 || mysqlPort > 65535 {
+		return Config{}, fmt.Errorf("MYSQL_PORT must be between 1 and 65535")
+	}
 
 	redisPort, err := envInt(getenv, "REDIS_PORT", 6379)
 	if err != nil {
 		return Config{}, err
+	}
+	if redisPort < 1 || redisPort > 65535 {
+		return Config{}, fmt.Errorf("REDIS_PORT must be between 1 and 65535")
 	}
 
 	redisDatabase, err := envInt(getenv, "REDIS_DATABASE", 0)
 	if err != nil {
 		return Config{}, err
 	}
+	if redisDatabase < 0 {
+		return Config{}, fmt.Errorf("REDIS_DATABASE must be non-negative")
+	}
 
 	deviceOfflineThreshold, err := envDuration(getenv, "DEVICE_OFFLINE_THRESHOLD", 30*time.Second)
 	if err != nil {
 		return Config{}, err
+	}
+	if deviceOfflineThreshold <= 0 {
+		return Config{}, fmt.Errorf("DEVICE_OFFLINE_THRESHOLD must be positive")
 	}
 
 	return Config{

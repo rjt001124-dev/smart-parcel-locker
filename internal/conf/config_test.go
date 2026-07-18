@@ -106,3 +106,38 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadRejectsOutOfRangeValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{name: "zero MySQL port", key: "MYSQL_PORT", value: "0"},
+		{name: "negative MySQL port", key: "MYSQL_PORT", value: "-1"},
+		{name: "MySQL port above maximum", key: "MYSQL_PORT", value: "65536"},
+		{name: "zero Redis port", key: "REDIS_PORT", value: "0"},
+		{name: "negative Redis port", key: "REDIS_PORT", value: "-1"},
+		{name: "Redis port above maximum", key: "REDIS_PORT", value: "65536"},
+		{name: "negative Redis database", key: "REDIS_DATABASE", value: "-1"},
+		{name: "zero device offline threshold", key: "DEVICE_OFFLINE_THRESHOLD", value: "0s"},
+		{name: "negative device offline threshold", key: "DEVICE_OFFLINE_THRESHOLD", value: "-1s"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Load(func(key string) string {
+				if key == tt.key {
+					return tt.value
+				}
+				return ""
+			})
+			if err == nil {
+				t.Fatal("Load() error = nil, want an error")
+			}
+			if !strings.Contains(err.Error(), tt.key) {
+				t.Fatalf("Load() error = %q, want it to name %s", err, tt.key)
+			}
+		})
+	}
+}
