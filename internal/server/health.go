@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	khttp "github.com/go-kratos/kratos/v2/transport/http"
+	platformdata "github.com/rjt001124-dev/smart-parcel-locker/internal/platform/data"
 )
 
 const serviceName = "smart-parcel-locker-api"
@@ -24,5 +25,18 @@ func RegisterHealth(srv *khttp.Server, version string) {
 			Service: serviceName,
 			Version: version,
 		})
+	})
+}
+
+func RegisterReadiness(srv *khttp.Server, readiness platformdata.Readiness) {
+	srv.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+		status := readiness.Check(r.Context())
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if status.Status == "not_ready" {
+			w.WriteHeader(http.StatusServiceUnavailable)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+		_ = json.NewEncoder(w).Encode(status)
 	})
 }
