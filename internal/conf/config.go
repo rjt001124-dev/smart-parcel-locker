@@ -102,7 +102,7 @@ func envInt(getenv func(string) string, key string, defaultValue int) (int, erro
 
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", key, err)
+		return 0, fmt.Errorf("%s must be an integer", key)
 	}
 	return parsed, nil
 }
@@ -115,7 +115,7 @@ func envDuration(getenv func(string) string, key string, defaultValue time.Durat
 
 	parsed, err := time.ParseDuration(value)
 	if err != nil {
-		return 0, fmt.Errorf("%s: %w", key, err)
+		return 0, fmt.Errorf("%s must be a valid duration", key)
 	}
 	return parsed, nil
 }

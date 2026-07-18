@@ -107,6 +107,40 @@ func TestLoadRejectsInvalidValues(t *testing.T) {
 	}
 }
 
+func TestLoadRedactsInvalidValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		key   string
+		value string
+	}{
+		{name: "MySQL port", key: "MYSQL_PORT", value: "leak-marker-int"},
+		{name: "Redis database", key: "REDIS_DATABASE", value: "leak-marker-db"},
+		{name: "device offline threshold", key: "DEVICE_OFFLINE_THRESHOLD", value: "leak-marker-duration"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Load(func(key string) string {
+				if key == tt.key {
+					return tt.value
+				}
+				return ""
+			})
+			if err == nil {
+				t.Fatal("Load() error = nil, want an error")
+			}
+
+			message := err.Error()
+			if !strings.Contains(message, tt.key) {
+				t.Fatalf("Load() error does not name %s", tt.key)
+			}
+			if strings.Contains(message, tt.value) {
+				t.Fatalf("Load() error disclosed the raw value for %s", tt.key)
+			}
+		})
+	}
+}
+
 func TestLoadRejectsOutOfRangeValues(t *testing.T) {
 	tests := []struct {
 		name  string
