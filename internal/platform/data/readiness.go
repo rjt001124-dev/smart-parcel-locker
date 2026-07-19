@@ -2,6 +2,17 @@ package data
 
 import (
 	"context"
+	"sync"
+	"time"
+)
+
+const (
+	StatusOK       = "ok"
+	StatusDegraded = "degraded"
+	StatusNotReady = "not_ready"
+
+	DependencyStatusOK          = "ok"
+	DependencyStatusUnavailable = "unavailable"
 )
 
 type Readiness interface {
@@ -19,10 +30,15 @@ type Probe func(context.Context) error
 type Checker struct {
 	mysqlProbe Probe
 	redisProbe Probe
+	timeout    time.Duration
 }
 
 func NewChecker(mysqlProbe, redisProbe Probe) *Checker {
-	return &Checker{mysqlProbe: mysqlProbe, redisProbe: redisProbe}
+	return newCheckerWithTimeout(mysqlProbe, redisProbe, dependencyProbeTimeout)
+}
+
+func newCheckerWithTimeout(mysqlProbe, redisProbe Probe, timeout time.Duration) *Checker {
+	return &Checker{mysqlProbe: mysqlProbe, redisProbe: redisProbe, timeout: timeout}
 }
 
 func NewReadiness(clients *Clients) Readiness {
@@ -33,23 +49,32 @@ func NewReadiness(clients *Clients) Readiness {
 }
 
 func (c *Checker) Check(ctx context.Context) Status {
-	probeCtx, cancel := context.WithTimeout(ctx, dependencyProbeTimeout)
+	probeCtx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	mysqlStatus := "ok"
-	if err := c.mysqlProbe(probeCtx); err != nil {
-		mysqlStatus = "unavailable"
-	}
-	redisStatus := "ok"
-	if err := c.redisProbe(probeCtx); err != nil {
-		redisStatus = "unavailable"
-	}
+	mysqlStatus := DependencyStatusOK
+	redisStatus := DependencyStatusOK
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if err := c.mysqlProbe(probeCtx); err != nil {
+			mysqlStatus = DependencyStatusUnavailable
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := c.redisProbe(probeCtx); err != nil {
+			redisStatus = DependencyStatusUnavailable
+		}
+	}()
+	wg.Wait()
 
-	overall := "ok"
-	if mysqlStatus == "unavailable" {
-		overall = "not_ready"
-	} else if redisStatus == "unavailable" {
-		overall = "degraded"
+	overall := StatusOK
+	if mysqlStatus == DependencyStatusUnavailable {
+		overall = StatusNotReady
+	} else if redisStatus == DependencyStatusUnavailable {
+		overall = StatusDegraded
 	}
 
 	return Status{Status: overall, MySQL: mysqlStatus, Redis: redisStatus}

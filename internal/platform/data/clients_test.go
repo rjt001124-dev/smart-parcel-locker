@@ -2,6 +2,7 @@ package data
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -45,6 +46,39 @@ func TestMySQLDSN(t *testing.T) {
 	}
 	if got.MultiStatements {
 		t.Error("MultiStatements = true, want false")
+	}
+}
+
+func TestClientsCloseIsSafeForConcurrentCallers(t *testing.T) {
+	mysqlCloser := &countingCloser{err: errors.New("mysql raw close error")}
+	redisCloser := &countingCloser{err: errors.New("redis raw close error")}
+	clients := newClientsWithClosers(mysqlCloser, redisCloser)
+
+	const callers = 20
+	errs := make([]error, callers)
+	var wg sync.WaitGroup
+	wg.Add(callers)
+	for i := range callers {
+		go func() {
+			defer wg.Done()
+			errs[i] = clients.Close()
+		}()
+	}
+	wg.Wait()
+
+	if mysqlCloser.calls != 1 {
+		t.Errorf("MySQL close calls = %d, want 1", mysqlCloser.calls)
+	}
+	if redisCloser.calls != 1 {
+		t.Errorf("Redis close calls = %d, want 1", redisCloser.calls)
+	}
+	for i, err := range errs {
+		if err != errs[0] {
+			t.Errorf("Close caller %d returned a different error instance", i)
+		}
+		if err == nil || err.Error() != "mysql close failed\nredis close failed" {
+			t.Errorf("Close caller %d error = %v, want joined sanitized errors", i, err)
+		}
 	}
 }
 

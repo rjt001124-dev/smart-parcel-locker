@@ -32,10 +32,13 @@ func RegisterReadiness(srv *khttp.Server, readiness platformdata.Readiness) {
 	srv.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		status := readiness.Check(r.Context())
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		if status.Status == "not_ready" {
-			w.WriteHeader(http.StatusServiceUnavailable)
-		} else {
+		switch status.Status {
+		case platformdata.StatusOK, platformdata.StatusDegraded:
 			w.WriteHeader(http.StatusOK)
+		case platformdata.StatusNotReady:
+			w.WriteHeader(http.StatusServiceUnavailable)
+		default:
+			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 		_ = json.NewEncoder(w).Encode(status)
 	})

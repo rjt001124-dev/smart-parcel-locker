@@ -55,6 +55,11 @@ func TestRegisterReadiness(t *testing.T) {
 			status:     platformdata.Status{Status: "not_ready", MySQL: "unavailable", Redis: "ok"},
 			wantStatus: http.StatusServiceUnavailable,
 		},
+		{
+			name:       "unknown fails closed",
+			status:     platformdata.Status{Status: "unexpected", MySQL: "ok", Redis: "ok"},
+			wantStatus: http.StatusServiceUnavailable,
+		},
 	}
 
 	for _, tt := range tests {
