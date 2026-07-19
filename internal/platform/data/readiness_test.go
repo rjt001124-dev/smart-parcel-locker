@@ -52,33 +52,62 @@ func TestCheckerStatus(t *testing.T) {
 }
 
 func TestCheckerRunsProbesConcurrentlyWithinDeadline(t *testing.T) {
-	const timeout = 50 * time.Millisecond
-	redisRan := make(chan struct{})
+	const waitTimeout = 250 * time.Millisecond
+	mysqlStarted := make(chan struct{})
+	redisStarted := make(chan struct{})
+	releaseMySQL := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() { close(releaseMySQL) })
+	}
+	mysqlError := errors.New("mysql unavailable")
 	checker := newCheckerWithTimeout(
-		func(ctx context.Context) error {
-			<-ctx.Done()
-			return ctx.Err()
+		func(context.Context) error {
+			close(mysqlStarted)
+			<-releaseMySQL
+			return mysqlError
 		},
 		func(context.Context) error {
-			close(redisRan)
+			close(redisStarted)
 			return nil
 		},
-		timeout,
+		time.Second,
 	)
 
-	started := time.Now()
-	got := checker.Check(context.Background())
-	elapsed := time.Since(started)
+	result := make(chan Status, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		result <- checker.Check(context.Background())
+	}()
+	defer func() {
+		release()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("Check goroutine did not exit during cleanup")
+		}
+	}()
 
 	select {
-	case <-redisRan:
-	default:
-		t.Fatal("Redis probe did not run while MySQL was blocked")
+	case <-mysqlStarted:
+	case <-time.After(waitTimeout):
+		t.Fatal("MySQL probe did not start")
 	}
-	if elapsed >= time.Second {
-		t.Fatalf("Check took %v, want bounded by the short checker deadline", elapsed)
+	select {
+	case <-redisStarted:
+	case <-time.After(waitTimeout):
+		t.Fatal("Redis probe did not start before MySQL was released")
 	}
-	want := Status{Status: "not_ready", MySQL: "unavailable", Redis: "ok"}
+
+	release()
+	var got Status
+	select {
+	case got = <-result:
+	case <-time.After(waitTimeout):
+		t.Fatal("Check did not return after MySQL was released")
+	}
+	want := Status{Status: StatusNotReady, MySQL: DependencyStatusUnavailable, Redis: DependencyStatusOK}
 	if got != want {
 		t.Fatalf("Check() = %+v, want %+v", got, want)
 	}
