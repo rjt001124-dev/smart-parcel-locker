@@ -17,6 +17,11 @@ type UseCase struct {
 	repo Repository
 }
 
+type nearbyCandidate struct {
+	site      Site
+	distanceM float64
+}
+
 func NewUseCase(repo Repository) *UseCase {
 	return &UseCase{repo: repo}
 }
@@ -52,7 +57,7 @@ func (uc *UseCase) ListNearby(ctx context.Context, query NearbyQuery) ([]NearbyS
 		return nil, err
 	}
 
-	nearby := make([]NearbySite, 0)
+	matched := make([]nearbyCandidate, 0)
 	for _, site := range candidates {
 		if site.Status != SiteActive || !validCoordinates(site.Latitude, site.Longitude) {
 			continue
@@ -61,15 +66,20 @@ func (uc *UseCase) ListNearby(ctx context.Context, query NearbyQuery) ([]NearbyS
 		if distance > float64(radius) {
 			continue
 		}
-		nearby = append(nearby, NearbySite{Site: site, DistanceM: int32(math.Round(distance))})
+		matched = append(matched, nearbyCandidate{site: site, distanceM: distance})
 	}
 
-	sort.Slice(nearby, func(i, j int) bool {
-		if nearby[i].DistanceM == nearby[j].DistanceM {
-			return nearby[i].Site.ID < nearby[j].Site.ID
+	sort.Slice(matched, func(i, j int) bool {
+		if matched[i].distanceM == matched[j].distanceM {
+			return matched[i].site.ID < matched[j].site.ID
 		}
-		return nearby[i].DistanceM < nearby[j].DistanceM
+		return matched[i].distanceM < matched[j].distanceM
 	})
+
+	nearby := make([]NearbySite, len(matched))
+	for i, candidate := range matched {
+		nearby[i] = NearbySite{Site: candidate.site, DistanceM: int32(math.Round(candidate.distanceM))}
+	}
 	return nearby, nil
 }
 
@@ -121,22 +131,24 @@ func validCoordinates(latitude, longitude float64) bool {
 
 func boundingBox(latitude, longitude, radiusM float64) GeoBounds {
 	angularRadius := radiusM / earthRadiusM
-	latitudeDelta := angularRadius * 180 / math.Pi
-	minLatitude := clamp(latitude-latitudeDelta, -90, 90)
-	maxLatitude := clamp(latitude+latitudeDelta, -90, 90)
+	latitudeRadians := latitude * math.Pi / 180
+	longitudeRadians := longitude * math.Pi / 180
+	minLatitudeRadians := clamp(latitudeRadians-angularRadius, -math.Pi/2, math.Pi/2)
+	maxLatitudeRadians := clamp(latitudeRadians+angularRadius, -math.Pi/2, math.Pi/2)
 
 	minLongitude, maxLongitude := -180.0, 180.0
-	cosLatitude := math.Cos(latitude * math.Pi / 180)
-	if math.Abs(cosLatitude) > 1e-12 {
-		longitudeDelta := latitudeDelta / math.Abs(cosLatitude)
-		if longitudeDelta < 180 && longitude-longitudeDelta >= -180 && longitude+longitudeDelta <= 180 {
-			minLongitude = longitude - longitudeDelta
-			maxLongitude = longitude + longitudeDelta
+	crossesPole := latitudeRadians-angularRadius <= -math.Pi/2 || latitudeRadians+angularRadius >= math.Pi/2
+	if !crossesPole {
+		ratio := clamp(math.Sin(angularRadius)/math.Cos(latitudeRadians), -1, 1)
+		longitudeDelta := math.Asin(ratio)
+		if longitudeRadians-longitudeDelta >= -math.Pi && longitudeRadians+longitudeDelta <= math.Pi {
+			minLongitude = (longitudeRadians - longitudeDelta) * 180 / math.Pi
+			maxLongitude = (longitudeRadians + longitudeDelta) * 180 / math.Pi
 		}
 	}
 
 	return GeoBounds{
-		MinLatitude: minLatitude, MaxLatitude: maxLatitude,
+		MinLatitude: minLatitudeRadians * 180 / math.Pi, MaxLatitude: maxLatitudeRadians * 180 / math.Pi,
 		MinLongitude: minLongitude, MaxLongitude: maxLongitude,
 	}
 }

@@ -33,6 +33,7 @@ type fakeRepository struct {
 	lastCellSiteID     uint64
 	lastCellSize       CellSize
 	lastCellStatus     CellStatus
+	honorBounds        bool
 }
 
 func (f *fakeRepository) ListEnabledCities(context.Context) ([]City, error) {
@@ -49,7 +50,17 @@ func (f *fakeRepository) ListCandidateSites(_ context.Context, cityID uint64, bo
 	f.listCandidateCalls++
 	f.lastCityID = cityID
 	f.lastBounds = bounds
-	return f.candidates, f.listCandidatesErr
+	if !f.honorBounds || f.listCandidatesErr != nil {
+		return f.candidates, f.listCandidatesErr
+	}
+	candidates := make([]Site, 0, len(f.candidates))
+	for _, site := range f.candidates {
+		if site.Latitude >= bounds.MinLatitude && site.Latitude <= bounds.MaxLatitude &&
+			site.Longitude >= bounds.MinLongitude && site.Longitude <= bounds.MaxLongitude {
+			candidates = append(candidates, site)
+		}
+	}
+	return candidates, nil
 }
 
 func (f *fakeRepository) GetSite(_ context.Context, siteID uint64) (Site, error) {
@@ -202,6 +213,27 @@ func TestListNearbyEqualRoundedDistanceUsesSiteIDTieBreak(t *testing.T) {
 	}
 }
 
+func TestListNearbySortsByRawDistanceBeforeRounding(t *testing.T) {
+	longitudeAtDistance := func(distanceM float64) float64 {
+		return distanceM / earthRadiusM * 180 / math.Pi
+	}
+	repo := nearbyRepo([]Site{
+		{ID: 1, Latitude: 0, Longitude: longitudeAtDistance(100.4), Status: SiteActive},
+		{ID: 9, Latitude: 0, Longitude: longitudeAtDistance(100.1), Status: SiteActive},
+	})
+
+	got, err := NewUseCase(repo).ListNearby(context.Background(), NearbyQuery{CityCode: "CITY", RadiusM: 1000})
+	if err != nil {
+		t.Fatalf("ListNearby() error = %v", err)
+	}
+	if got[0].DistanceM != 100 || got[1].DistanceM != 100 {
+		t.Fatalf("rounded distances = [%d %d], want [100 100]", got[0].DistanceM, got[1].DistanceM)
+	}
+	if got[0].Site.ID != 9 || got[1].Site.ID != 1 {
+		t.Fatalf("ListNearby() IDs = [%d %d], want nearer site IDs [9 1]", got[0].Site.ID, got[1].Site.ID)
+	}
+}
+
 func TestListNearbyNoMatchesReturnsNonNilEmptySlice(t *testing.T) {
 	got, err := NewUseCase(nearbyRepo(nil)).ListNearby(context.Background(), NearbyQuery{CityCode: "CITY", RadiusM: 1000})
 	if err != nil {
@@ -261,6 +293,27 @@ func TestListNearbyBoundsCoverAntimeridianCrossing(t *testing.T) {
 	if repo.lastBounds.MinLongitude != -180 || repo.lastBounds.MaxLongitude != 180 {
 		t.Fatalf("longitude bounds = [%f, %f], want full range for antimeridian crossing",
 			repo.lastBounds.MinLongitude, repo.lastBounds.MaxLongitude)
+	}
+}
+
+func TestListNearbyPoleCrossingBoundsUseFullLongitude(t *testing.T) {
+	repo := nearbyRepo([]Site{{
+		ID: 1, Latitude: 89.8, Longitude: 90, Status: SiteActive,
+	}})
+	repo.honorBounds = true
+
+	got, err := NewUseCase(repo).ListNearby(context.Background(), NearbyQuery{
+		CityCode: "CITY", Latitude: 89.6, Longitude: 0, RadiusM: 50000,
+	})
+	if err != nil {
+		t.Fatalf("ListNearby() error = %v", err)
+	}
+	if repo.lastBounds.MinLongitude != -180 || repo.lastBounds.MaxLongitude != 180 {
+		t.Fatalf("longitude bounds = [%f, %f], want full range for pole crossing",
+			repo.lastBounds.MinLongitude, repo.lastBounds.MaxLongitude)
+	}
+	if len(got) != 1 || got[0].Site.ID != 1 {
+		t.Fatalf("ListNearby() = %+v, want in-radius site across pole longitude", got)
 	}
 }
 
