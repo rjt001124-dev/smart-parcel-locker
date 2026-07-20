@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package locker.v1;
+
+option go_package = "github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1;v1";
+
+import "google/api/annotations.proto";
+
+service SiteService {
+  rpc ListCities(ListCitiesRequest) returns (ListCitiesReply) {
+    option (google.api.http) = {get: "/v1/cities"};
+  }
+  rpc ListSites(ListSitesRequest) returns (ListSitesReply) {
+    option (google.api.http) = {get: "/v1/sites"};
+  }
+  rpc GetSite(GetSiteRequest) returns (GetSiteReply) {
+    option (google.api.http) = {get: "/v1/sites/{site_id}"};
+  }
+  rpc ListCells(ListCellsRequest) returns (ListCellsReply) {
+    option (google.api.http) = {get: "/v1/sites/{site_id}/cells"};
+  }
+}
+
+enum CellSize {
+  CELL_SIZE_UNSPECIFIED = 0;
+  CELL_SIZE_SMALL = 1;
+  CELL_SIZE_MEDIUM = 2;
+  CELL_SIZE_LARGE = 3;
+}
+
+enum CellStatus {
+  CELL_STATUS_UNSPECIFIED = 0;
+  CELL_STATUS_IDLE = 1;
+  CELL_STATUS_LOCKED = 2;
+  CELL_STATUS_OCCUPIED = 3;
+  CELL_STATUS_DISABLED = 4;
+}
+
+message City {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string province = 4;
+}
+
+message ListCitiesRequest {}
+
+message ListCitiesReply {
+  repeated City cities = 1;
+}
+
+message CellAvailability {
+  CellSize size = 1;
+  int32 available_count = 2;
+}
+
+message SiteSummary {
+  string id = 1;
+  string site_no = 2;
+  string name = 3;
+  string address = 4;
+  double latitude = 5;
+  double longitude = 6;
+  int32 distance_m = 7;
+  repeated CellAvailability availability = 8;
+}
+
+message ListSitesRequest {
+  string city_code = 1;
+  double latitude = 2;
+  double longitude = 3;
+  int32 radius_m = 4;
+}
+
+message ListSitesReply {
+  repeated SiteSummary sites = 1;
+}
+
+message GetSiteRequest {
+  string site_id = 1;
+}
+
+message GetSiteReply {
+  string id = 1;
+  string site_no = 2;
+  string name = 3;
+  string address = 4;
+  double latitude = 5;
+  double longitude = 6;
+  string open_time = 7;
+  string close_time = 8;
+  int32 online_device_count = 9;
+  repeated CellAvailability availability = 10;
+}
+
+message ListCellsRequest {
+  string site_id = 1;
+  CellSize size = 2;
+  CellStatus status = 3;
+}
+
+message CellView {
+  string id = 1;
+  string cell_no = 2;
+  CellSize size = 3;
+  CellStatus status = 4;
+}
+
+message ListCellsReply {
+  repeated CellView cells = 1;
+}
