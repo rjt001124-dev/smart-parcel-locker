@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -23,21 +24,98 @@ func TestRepositoryRejectsNilDatabase(t *testing.T) {
 
 func TestRepositoryAgainstMigratedSeed(t *testing.T) {
 	db := openIntegrationDB(t)
-	repo, err := NewRepository(db, nil, 5*time.Minute, func() time.Time { return time.Now().UTC() })
+	fixedNow := time.Date(2026, 7, 20, 12, 0, 0, 0, time.UTC)
+	repo, err := NewRepository(db, nil, 5*time.Minute, func() time.Time { return fixedNow })
 	if err != nil {
 		t.Fatalf("NewRepository() error = %v", err)
 	}
 	ctx := context.Background()
 
-	t.Run("enabled cities and exact lookup", func(t *testing.T) {
-		const disabledCode = "TEST-DISABLED-CITY"
-		if _, err := db.ExecContext(ctx, `DELETE FROM cities WHERE code = ?`, disabledCode); err != nil {
-			t.Fatalf("remove previous test city: %v", err)
+	t.Run("preserves canceled and expired contexts", func(t *testing.T) {
+		canceledCtx, cancel := context.WithCancel(ctx)
+		cancel()
+		if _, err := repo.ListEnabledCities(canceledCtx); !errors.Is(err, context.Canceled) {
+			t.Fatalf("ListEnabledCities(canceled) error = %v, want context.Canceled", err)
 		}
+
+		expiredCtx, cancel := context.WithDeadline(ctx, time.Now().Add(-time.Second))
+		defer cancel()
+		if _, err := repo.FindCityByCode(expiredCtx, "310100"); !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("FindCityByCode(expired) error = %v, want context.DeadlineExceeded", err)
+		}
+	})
+
+	t.Run("nearby index has exact column order", func(t *testing.T) {
+		rows, err := db.QueryContext(ctx, `
+			SELECT column_name
+			FROM information_schema.statistics
+			WHERE table_schema = DATABASE() AND table_name = 'sites' AND index_name = 'idx_sites_nearby'
+			ORDER BY seq_in_index`)
+		if err != nil {
+			t.Fatalf("query nearby index: %v", err)
+		}
+		defer rows.Close()
+		var got []string
+		for rows.Next() {
+			var column string
+			if err := rows.Scan(&column); err != nil {
+				t.Fatalf("scan nearby index column: %v", err)
+			}
+			got = append(got, column)
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatalf("iterate nearby index columns: %v", err)
+		}
+		want := []string{"city_id", "service_status", "latitude", "longitude", "id"}
+		if len(got) != len(want) {
+			t.Fatalf("idx_sites_nearby columns = %v, want %v", got, want)
+		}
+		for i := range want {
+			if got[i] != want[i] {
+				t.Fatalf("idx_sites_nearby columns = %v, want %v", got, want)
+			}
+		}
+
+		explainRows, err := db.QueryContext(ctx, `
+			EXPLAIN SELECT s.id, s.site_no, s.city_id, s.name, s.address, s.latitude, s.longitude,
+			       s.open_time, s.close_time, s.service_status
+			FROM sites s FORCE INDEX (idx_sites_nearby)
+			JOIN cities c ON c.id = s.city_id
+			WHERE c.id = ? AND c.enabled = TRUE AND s.service_status = 'ACTIVE'
+			  AND s.latitude BETWEEN ? AND ? AND s.longitude BETWEEN ? AND ?
+			ORDER BY s.id`, 1, 31.02, 31.03, 121.04, 121.05)
+		if err != nil {
+			t.Fatalf("explain candidate query: %v", err)
+		}
+		defer explainRows.Close()
+		var siteKey string
+		for explainRows.Next() {
+			var id int
+			var selectType, tableName, accessType string
+			var partitions, possibleKeys, key, keyLen, ref, extra sql.NullString
+			var estimatedRows int64
+			var filtered float64
+			if err := explainRows.Scan(&id, &selectType, &tableName, &partitions, &accessType, &possibleKeys, &key, &keyLen, &ref, &estimatedRows, &filtered, &extra); err != nil {
+				t.Fatalf("scan candidate explain: %v", err)
+			}
+			if tableName == "s" && key.Valid {
+				siteKey = key.String
+			}
+		}
+		if err := explainRows.Err(); err != nil {
+			t.Fatalf("iterate candidate explain: %v", err)
+		}
+		if siteKey != "idx_sites_nearby" {
+			t.Fatalf("candidate query key = %q, want idx_sites_nearby", siteKey)
+		}
+	})
+
+	t.Run("enabled cities and exact lookup", func(t *testing.T) {
+		disabledCode := uniqueFixtureID("TDC-")
 		if _, err := db.ExecContext(ctx, `INSERT INTO cities (code, name, province, enabled) VALUES (?, 'disabled', 'test', FALSE)`, disabledCode); err != nil {
 			t.Fatalf("insert disabled city: %v", err)
 		}
-		t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM cities WHERE code = ?`, disabledCode) })
+		t.Cleanup(func() { cleanupExec(t, db, "disabled city", `DELETE FROM cities WHERE code = ?`, disabledCode) })
 
 		cities, err := repo.ListEnabledCities(ctx)
 		if err != nil {
@@ -66,14 +144,13 @@ func TestRepositoryAgainstMigratedSeed(t *testing.T) {
 	})
 
 	t.Run("candidate sites filter bounds and omit phone", func(t *testing.T) {
-		const suspendedSiteNo = "TEST-REPO-SUSPENDED"
-		_, _ = db.ExecContext(ctx, `DELETE FROM sites WHERE site_no = ?`, suspendedSiteNo)
+		suspendedSiteNo := uniqueFixtureID("TEST-SUSPENDED-")
 		if _, err := db.ExecContext(ctx, `
 			INSERT INTO sites (site_no, city_id, name, address, latitude, longitude, open_time, close_time, contact_phone, service_status)
 			VALUES (?, 1, 'suspended', 'test', 31.2305000, 121.4738000, '08:00:00', '22:00:00', 'distinctive-test-phone', 'SUSPENDED')`, suspendedSiteNo); err != nil {
 			t.Fatalf("insert suspended site: %v", err)
 		}
-		t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM sites WHERE site_no = ?`, suspendedSiteNo) })
+		t.Cleanup(func() { cleanupExec(t, db, "suspended site", `DELETE FROM sites WHERE site_no = ?`, suspendedSiteNo) })
 
 		bounds := biz.GeoBounds{MinLatitude: -90, MaxLatitude: 90, MinLongitude: -180, MaxLongitude: 180}
 		sites, err := repo.ListCandidateSites(ctx, 1, bounds)
@@ -113,8 +190,8 @@ func TestRepositoryAgainstMigratedSeed(t *testing.T) {
 	})
 
 	t.Run("availability excludes ineligible devices and cells", func(t *testing.T) {
-		prepareSeedDeviceFresh(t, db)
-		insertExclusionFixtures(t, db)
+		prepareSeedDeviceFresh(t, db, fixedNow)
+		insertExclusionFixtures(t, db, fixedNow)
 
 		got, err := repo.GetAvailabilitySummary(ctx, 1)
 		if err != nil {
@@ -122,7 +199,7 @@ func TestRepositoryAgainstMigratedSeed(t *testing.T) {
 		}
 		want := []biz.CellAvailability{
 			{Size: biz.CellSizeSmall, AvailableCount: 3},
-			{Size: biz.CellSizeMedium, AvailableCount: 1},
+			{Size: biz.CellSizeMedium, AvailableCount: 2},
 			{Size: biz.CellSizeLarge, AvailableCount: 1},
 		}
 		if len(got) != len(want) {
@@ -140,22 +217,22 @@ func TestRepositoryAgainstMigratedSeed(t *testing.T) {
 	})
 
 	t.Run("list cells validates filters and hides unavailable idle cells", func(t *testing.T) {
-		prepareSeedDeviceFresh(t, db)
-		insertExclusionFixtures(t, db)
+		prepareSeedDeviceFresh(t, db, fixedNow)
+		fixtures := insertExclusionFixtures(t, db, fixedNow)
 
 		idle, err := repo.ListCells(ctx, 1, "", biz.CellStatusIdle)
 		if err != nil {
 			t.Fatalf("ListCells(IDLE) error = %v", err)
 		}
-		if len(idle) != 5 {
-			t.Fatalf("ListCells(IDLE) = %+v, want four seed plus one eligible fixture", idle)
+		if len(idle) != 6 {
+			t.Fatalf("ListCells(IDLE) = %+v, want four seed plus eligible and exact-cutoff fixtures", idle)
 		}
 		medium, err := repo.ListCells(ctx, 1, biz.CellSizeMedium, biz.CellStatusIdle)
-		if err != nil || len(medium) != 1 || medium[0].CellNo != "B01" {
+		if err != nil || len(medium) != 2 || medium[0].CellNo != "B01" || medium[1].CellNo != fixtures.cutoffCell {
 			t.Fatalf("ListCells(MEDIUM, IDLE) = %+v, %v", medium, err)
 		}
 		locked, err := repo.ListCells(ctx, 1, biz.CellSizeLarge, biz.CellStatusLocked)
-		if err != nil || len(locked) != 1 || locked[0].CellNo != "T-LOCKED" {
+		if err != nil || len(locked) != 1 || locked[0].CellNo != fixtures.lockedCell {
 			t.Fatalf("ListCells(LARGE, LOCKED) = %+v, %v", locked, err)
 		}
 		empty, err := repo.ListCells(ctx, 999999, "", "")
@@ -181,7 +258,11 @@ func openIntegrationDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal("open integration database failed")
 	}
-	t.Cleanup(func() { _ = db.Close() })
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close integration database: %v", err)
+		}
+	})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
@@ -190,7 +271,7 @@ func openIntegrationDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func prepareSeedDeviceFresh(t *testing.T, db *sql.DB) {
+func prepareSeedDeviceFresh(t *testing.T, db *sql.DB, now time.Time) {
 	t.Helper()
 	var network, operational string
 	var heartbeat sql.NullTime
@@ -198,36 +279,47 @@ func prepareSeedDeviceFresh(t *testing.T, db *sql.DB) {
 		t.Fatalf("read seed device: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = db.Exec(`UPDATE locker_devices SET network_status = ?, operational_status = ?, last_heartbeat_at = ? WHERE id = 1`, network, operational, heartbeat)
+		cleanupExec(t, db, "seed device state", `UPDATE locker_devices SET network_status = ?, operational_status = ?, last_heartbeat_at = ? WHERE id = 1`, network, operational, heartbeat)
 	})
-	if _, err := db.Exec(`UPDATE locker_devices SET network_status = 'ONLINE', operational_status = 'ACTIVE', last_heartbeat_at = UTC_TIMESTAMP(6) WHERE id = 1`); err != nil {
+	if _, err := db.Exec(`UPDATE locker_devices SET network_status = 'ONLINE', operational_status = 'ACTIVE', last_heartbeat_at = ? WHERE id = 1`, now); err != nil {
 		t.Fatalf("freshen seed device: %v", err)
 	}
 }
 
-func insertExclusionFixtures(t *testing.T, db *sql.DB) {
+type exclusionFixtures struct {
+	cutoffCell string
+	lockedCell string
+}
+
+func insertExclusionFixtures(t *testing.T, db *sql.DB, now time.Time) exclusionFixtures {
 	t.Helper()
-	const prefix = "TEST-REPO-"
-	_, _ = db.Exec(`DELETE c FROM locker_cells c JOIN locker_devices d ON d.id = c.device_id WHERE d.device_no LIKE ?`, prefix+"%")
-	_, _ = db.Exec(`DELETE FROM locker_devices WHERE device_no LIKE ?`, prefix+"%")
+	suffix := uniqueFixtureID("")
+	prefix := "TEST-REPO-" + suffix + "-"
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE c FROM locker_cells c JOIN locker_devices d ON d.id = c.device_id WHERE d.device_no LIKE ?`, prefix+"%")
-		_, _ = db.Exec(`DELETE FROM locker_devices WHERE device_no LIKE ?`, prefix+"%")
+		cleanupExec(t, db, "test cells", `DELETE c FROM locker_cells c JOIN locker_devices d ON d.id = c.device_id WHERE d.device_no LIKE ?`, prefix+"%")
+		cleanupExec(t, db, "test devices", `DELETE FROM locker_devices WHERE device_no LIKE ?`, prefix+"%")
 	})
 
 	type fixture struct {
-		deviceNo, network, operational, heartbeat, cellNo, size, status string
+		deviceNo, network, operational, cellNo, size, status string
+		heartbeat                                            *time.Time
 	}
+	cutoff := now.Add(-5 * time.Minute)
+	stale := cutoff.Add(-time.Microsecond)
+	eligibleCell := "T-" + suffix + "-E"
+	cutoffCell := "T-" + suffix + "-C"
+	lockedCell := "T-" + suffix + "-L"
 	fixtures := []fixture{
-		{prefix + "ELIGIBLE", "ONLINE", "ACTIVE", "UTC_TIMESTAMP(6)", "T-ELIGIBLE", "SMALL", "IDLE"},
-		{prefix + "STALE", "ONLINE", "ACTIVE", "UTC_TIMESTAMP(6) - INTERVAL 1 DAY", "T-STALE", "MEDIUM", "IDLE"},
-		{prefix + "OFFLINE", "OFFLINE", "ACTIVE", "UTC_TIMESTAMP(6)", "T-OFFLINE", "LARGE", "IDLE"},
-		{prefix + "MAINTENANCE", "ONLINE", "MAINTENANCE", "UTC_TIMESTAMP(6)", "T-MAINT", "SMALL", "IDLE"},
-		{prefix + "LOCKED", "ONLINE", "ACTIVE", "UTC_TIMESTAMP(6)", "T-LOCKED", "LARGE", "LOCKED"},
+		{prefix + "ELIGIBLE", "ONLINE", "ACTIVE", eligibleCell, "SMALL", "IDLE", &now},
+		{prefix + "CUTOFF", "ONLINE", "ACTIVE", cutoffCell, "MEDIUM", "IDLE", &cutoff},
+		{prefix + "STALE", "ONLINE", "ACTIVE", "T-" + suffix + "-S", "MEDIUM", "IDLE", &stale},
+		{prefix + "NULL", "ONLINE", "ACTIVE", "T-" + suffix + "-N", "LARGE", "IDLE", nil},
+		{prefix + "OFFLINE", "OFFLINE", "ACTIVE", "T-" + suffix + "-O", "LARGE", "IDLE", &now},
+		{prefix + "MAINTENANCE", "ONLINE", "MAINTENANCE", "T-" + suffix + "-M", "SMALL", "IDLE", &now},
+		{prefix + "LOCKED", "ONLINE", "ACTIVE", lockedCell, "LARGE", "LOCKED", &now},
 	}
 	for _, fixture := range fixtures {
-		query := `INSERT INTO locker_devices (device_no, site_id, network_status, operational_status, last_heartbeat_at) VALUES (?, 1, ?, ?, ` + fixture.heartbeat + `)`
-		result, err := db.Exec(query, fixture.deviceNo, fixture.network, fixture.operational)
+		result, err := db.Exec(`INSERT INTO locker_devices (device_no, site_id, network_status, operational_status, last_heartbeat_at) VALUES (?, 1, ?, ?, ?)`, fixture.deviceNo, fixture.network, fixture.operational, fixture.heartbeat)
 		if err != nil {
 			t.Fatalf("insert test device: %v", err)
 		}
@@ -238,5 +330,17 @@ func insertExclusionFixtures(t *testing.T, db *sql.DB) {
 		if _, err := db.Exec(`INSERT INTO locker_cells (device_id, cell_no, size, occupancy_status) VALUES (?, ?, ?, ?)`, deviceID, fixture.cellNo, fixture.size, fixture.status); err != nil {
 			t.Fatalf("insert test cell: %v", err)
 		}
+	}
+	return exclusionFixtures{cutoffCell: cutoffCell, lockedCell: lockedCell}
+}
+
+func uniqueFixtureID(prefix string) string {
+	return fmt.Sprintf("%s%x", prefix, time.Now().UnixNano())
+}
+
+func cleanupExec(t *testing.T, db *sql.DB, label, query string, args ...any) {
+	t.Helper()
+	if _, err := db.Exec(query, args...); err != nil {
+		t.Errorf("cleanup %s: %v", label, err)
 	}
 }

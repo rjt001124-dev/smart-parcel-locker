@@ -47,7 +47,7 @@ func (r *Repository) ListEnabledCities(ctx context.Context) ([]biz.City, error) 
 		WHERE enabled = TRUE
 		ORDER BY code, id`)
 	if err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	defer rows.Close()
 
@@ -55,12 +55,12 @@ func (r *Repository) ListEnabledCities(ctx context.Context) ([]biz.City, error) 
 	for rows.Next() {
 		var city biz.City
 		if err := rows.Scan(&city.ID, &city.Code, &city.Name, &city.Province, &city.Enabled); err != nil {
-			return nil, errDataUnavailable
+			return nil, sanitizeDataError(ctx, err)
 		}
 		cities = append(cities, city)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	return cities, nil
 }
@@ -75,7 +75,7 @@ func (r *Repository) FindCityByCode(ctx context.Context, code string) (biz.City,
 		return biz.City{}, biz.ErrCityNotFound
 	}
 	if err != nil {
-		return biz.City{}, errDataUnavailable
+		return biz.City{}, sanitizeDataError(ctx, err)
 	}
 	return city, nil
 }
@@ -88,13 +88,13 @@ func (r *Repository) ListCandidateSites(ctx context.Context, cityID uint64, boun
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT s.id, s.site_no, s.city_id, s.name, s.address, s.latitude, s.longitude,
 		       s.open_time, s.close_time, s.service_status
-		FROM sites s
+		FROM sites s FORCE INDEX (idx_sites_nearby)
 		JOIN cities c ON c.id = s.city_id
 		WHERE c.id = ? AND c.enabled = TRUE AND s.service_status = 'ACTIVE'
 		  AND s.latitude BETWEEN ? AND ? AND s.longitude BETWEEN ? AND ?
 		ORDER BY s.id`, cityID, bounds.MinLatitude, bounds.MaxLatitude, bounds.MinLongitude, bounds.MaxLongitude)
 	if err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	defer rows.Close()
 
@@ -105,12 +105,12 @@ func (r *Repository) ListCandidateSites(ctx context.Context, cityID uint64, boun
 			&site.ID, &site.SiteNo, &site.CityID, &site.Name, &site.Address,
 			&site.Latitude, &site.Longitude, &site.OpenTime, &site.CloseTime, &site.Status,
 		); err != nil {
-			return nil, errDataUnavailable
+			return nil, sanitizeDataError(ctx, err)
 		}
 		sites = append(sites, site)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	_ = r.cache.SetCandidates(ctx, cityID, bounds, sites)
 	return sites, nil
@@ -131,7 +131,7 @@ func (r *Repository) GetSite(ctx context.Context, siteID uint64) (biz.Site, erro
 		return biz.Site{}, biz.ErrSiteNotFound
 	}
 	if err != nil {
-		return biz.Site{}, errDataUnavailable
+		return biz.Site{}, sanitizeDataError(ctx, err)
 	}
 	return site, nil
 }
@@ -152,7 +152,7 @@ func (r *Repository) GetAvailabilitySummary(ctx context.Context, siteID uint64) 
 		GROUP BY c.size
 		ORDER BY CASE c.size WHEN 'SMALL' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LARGE' THEN 3 END`, siteID, cutoff)
 	if err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	defer rows.Close()
 
@@ -160,12 +160,12 @@ func (r *Repository) GetAvailabilitySummary(ctx context.Context, siteID uint64) 
 	for rows.Next() {
 		var item biz.CellAvailability
 		if err := rows.Scan(&item.Size, &item.AvailableCount); err != nil {
-			return nil, errDataUnavailable
+			return nil, sanitizeDataError(ctx, err)
 		}
 		availability = append(availability, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	return availability, nil
 }
@@ -200,7 +200,7 @@ func (r *Repository) ListCells(ctx context.Context, siteID uint64, size biz.Cell
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	defer rows.Close()
 
@@ -208,14 +208,27 @@ func (r *Repository) ListCells(ctx context.Context, siteID uint64, size biz.Cell
 	for rows.Next() {
 		var cell biz.CellView
 		if err := rows.Scan(&cell.ID, &cell.CellNo, &cell.Size, &cell.Status); err != nil {
-			return nil, errDataUnavailable
+			return nil, sanitizeDataError(ctx, err)
 		}
 		cells = append(cells, cell)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, errDataUnavailable
+		return nil, sanitizeDataError(ctx, err)
 	}
 	return cells, nil
+}
+
+func sanitizeDataError(ctx context.Context, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
+	if errors.Is(err, context.Canceled) {
+		return context.Canceled
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return context.DeadlineExceeded
+	}
+	return errDataUnavailable
 }
 
 func validCellSize(size biz.CellSize) bool {

@@ -34,16 +34,17 @@ func NewCache(client redisCacheClient, ttl time.Duration) *Cache {
 }
 
 type cachedSite struct {
-	ID        uint64         `json:"id"`
-	SiteNo    string         `json:"site_no"`
-	CityID    uint64         `json:"city_id"`
-	Name      string         `json:"name"`
-	Address   string         `json:"address"`
-	Latitude  float64        `json:"latitude"`
-	Longitude float64        `json:"longitude"`
-	OpenTime  string         `json:"open_time"`
-	CloseTime string         `json:"close_time"`
-	Status    biz.SiteStatus `json:"status"`
+	ID           uint64         `json:"id"`
+	SiteNo       string         `json:"site_no"`
+	CityID       uint64         `json:"city_id"`
+	Name         string         `json:"name"`
+	Address      string         `json:"address"`
+	Latitude     float64        `json:"latitude"`
+	Longitude    float64        `json:"longitude"`
+	OpenTime     string         `json:"open_time"`
+	CloseTime    string         `json:"close_time"`
+	ContactPhone string         `json:"contact_phone,omitempty"`
+	Status       biz.SiteStatus `json:"status"`
 }
 
 func candidateCacheKey(cityID uint64, bounds biz.GeoBounds) string {
@@ -51,7 +52,7 @@ func candidateCacheKey(cityID uint64, bounds biz.GeoBounds) string {
 		math.Float64bits(bounds.MinLatitude), math.Float64bits(bounds.MaxLatitude),
 		math.Float64bits(bounds.MinLongitude), math.Float64bits(bounds.MaxLongitude))
 	digest := sha256.Sum256([]byte(stable))
-	return "site:candidates:" + hex.EncodeToString(digest[:])
+	return "site:candidates:v1:" + hex.EncodeToString(digest[:])
 }
 
 func (c *Cache) GetCandidates(ctx context.Context, cityID uint64, bounds biz.GeoBounds) ([]biz.Site, bool) {
@@ -65,11 +66,19 @@ func (c *Cache) GetCandidates(ctx context.Context, cityID uint64, bounds biz.Geo
 	}
 	var cached []cachedSite
 	if err := json.Unmarshal(raw, &cached); err != nil {
-		_ = c.client.Del(ctx, key).Err()
+		c.evict(ctx, key)
+		return nil, false
+	}
+	if cached == nil {
+		c.evict(ctx, key)
 		return nil, false
 	}
 	sites := make([]biz.Site, 0, len(cached))
 	for _, site := range cached {
+		if !validCachedSite(site) {
+			c.evict(ctx, key)
+			return nil, false
+		}
 		sites = append(sites, biz.Site{
 			ID: site.ID, SiteNo: site.SiteNo, CityID: site.CityID, Name: site.Name,
 			Address: site.Address, Latitude: site.Latitude, Longitude: site.Longitude,
@@ -77,6 +86,19 @@ func (c *Cache) GetCandidates(ctx context.Context, cityID uint64, bounds biz.Geo
 		})
 	}
 	return sites, true
+}
+
+func validCachedSite(site cachedSite) bool {
+	return site.ID > 0 && site.CityID > 0 && site.SiteNo != "" && site.Name != "" &&
+		!math.IsNaN(site.Latitude) && !math.IsInf(site.Latitude, 0) &&
+		!math.IsNaN(site.Longitude) && !math.IsInf(site.Longitude, 0) &&
+		site.Latitude >= -90 && site.Latitude <= 90 &&
+		site.Longitude >= -180 && site.Longitude <= 180 &&
+		site.Status == biz.SiteActive && site.ContactPhone == ""
+}
+
+func (c *Cache) evict(ctx context.Context, key string) {
+	_ = c.client.Del(ctx, key).Err()
 }
 
 func (c *Cache) SetCandidates(ctx context.Context, cityID uint64, bounds biz.GeoBounds, sites []biz.Site) error {
