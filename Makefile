@@ -1,15 +1,18 @@
 -include .env
 
+unexport GOOS
+unexport GOARCH
+
 BUF_VERSION := v1.50.0
 PROTOC_GEN_GO_VERSION := v1.36.6
 PROTOC_GEN_GO_HTTP_VERSION := v2.0.0-20260404020628-f149714c1d54
-GOOS := $(strip $(shell go env GOOS))
+GOHOSTOS := $(strip $(shell go env GOHOSTOS))
 GO_TOOL_BIN := $(strip $(shell go run ./tools/gotoolbin))
 ifeq ($(GO_TOOL_BIN),)
 $(error unable to resolve Go tool bin directory)
 endif
-GO_EXE := $(if $(filter windows,$(GOOS)),.exe,)
-PATH_SEPARATOR := $(if $(filter windows,$(GOOS)),;,:)
+GO_EXE := $(if $(filter windows,$(GOHOSTOS)),.exe,)
+PATH_SEPARATOR := $(if $(filter windows,$(GOHOSTOS)),;,:)
 BUF := $(GO_TOOL_BIN)/buf$(GO_EXE)
 export GOBIN := $(GO_TOOL_BIN)
 export PATH := $(GO_TOOL_BIN)$(PATH_SEPARATOR)$(PATH)
