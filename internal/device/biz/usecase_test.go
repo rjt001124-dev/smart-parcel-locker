@@ -215,6 +215,29 @@ func TestUseCaseReplaysSemanticallyEquivalentJSONPayload(t *testing.T) {
 	}
 }
 
+func TestUseCaseReplaysEmptyPayloadAfterRepositoryNormalization(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command)}
+	gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+	uc := fixedUseCase(repo, gateway, now)
+	req := CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-empty-json"}
+	first, err := uc.Execute(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// MySQL JSON persistence normalizes an empty payload to the valid object {}.
+	persisted := repo.commands[req.IdempotencyKey]
+	persisted.Payload = []byte(`{}`)
+	repo.commands[req.IdempotencyKey] = persisted
+	second, err := uc.Execute(context.Background(), req)
+	if err != nil {
+		t.Fatalf("empty payload replay error = %v", err)
+	}
+	if second.CommandNo != first.CommandNo || gateway.calls != 1 {
+		t.Fatalf("empty payload replay = %+v, first = %+v, gateway calls = %d", second, first, gateway.calls)
+	}
+}
+
 func TestUseCaseRejectsIdempotencyKeyConflict(t *testing.T) {
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: map[string]Command{

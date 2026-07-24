@@ -5,10 +5,12 @@ package data
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"os"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -127,11 +129,11 @@ func TestRepositoryDeviceCommandRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if string(created.Payload) != string(command.Payload) || created.CellNo != command.CellNo || created.Status != devicebiz.CommandPending {
+		if !sameJSONMeaning(created.Payload, command.Payload) || created.CellNo != command.CellNo || created.Status != devicebiz.CommandPending {
 			t.Fatalf("created=%+v", created)
 		}
 		found, err := repo.FindCommandByIdempotencyKey(ctx, command.IdempotencyKey)
-		if err != nil || string(found.Payload) != string(command.Payload) || found.CellNo != command.CellNo {
+		if err != nil || !sameJSONMeaning(found.Payload, command.Payload) || found.CellNo != command.CellNo {
 			t.Fatalf("found=%+v err=%v", found, err)
 		}
 		if err := repo.CompleteCommand(ctx, command.CommandNo, devicebiz.CommandSucceeded, devicebiz.GatewayResult{Opened: true, DoorClosed: true}, ""); !errors.Is(err, ErrCommandNotRunning) {
@@ -209,4 +211,12 @@ func isUnavailableMySQL(err error) bool {
 	}
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "connection refused") || strings.Contains(message, "i/o timeout")
+}
+
+func sameJSONMeaning(left, right []byte) bool {
+	var leftValue, rightValue any
+	if json.Unmarshal(left, &leftValue) != nil || json.Unmarshal(right, &rightValue) != nil {
+		return false
+	}
+	return reflect.DeepEqual(leftValue, rightValue)
 }

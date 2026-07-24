@@ -207,6 +207,12 @@ func sameCommandRequest(command Command, request CommandRequest) bool {
 }
 
 func semanticallyEqualJSON(left, right []byte) bool {
+	if len(left) == 0 {
+		left = []byte(`{}`)
+	}
+	if len(right) == 0 {
+		right = []byte(`{}`)
+	}
 	var leftValue, rightValue any
 	if err := json.Unmarshal(left, &leftValue); err != nil {
 		return bytes.Equal(left, right)
