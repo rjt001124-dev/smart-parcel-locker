@@ -68,6 +68,20 @@ func (r *Repository) reserveAvailable(ctx context.Context, req biz.ReserveReques
 	}
 	defer tx.Rollback()
 	var x biz.Reservation
+	if !skipLocked {
+		var expiresAt sql.NullTime
+		err = tx.QueryRowContext(ctx, `SELECT c.id,c.device_id,d.device_no,d.site_id,c.cell_no,c.size,c.occupancy_status,c.reservation_key,c.lock_expires_at FROM locker_cells c JOIN locker_devices d ON d.id=c.device_id WHERE c.reservation_key=? FOR UPDATE`, req.ReservationKey).Scan(&x.CellID, &x.DeviceID, &x.DeviceNo, &x.SiteID, &x.CellNo, &x.Size, &x.Status, &x.ReservationKey, &expiresAt)
+		if err == nil {
+			if expiresAt.Valid {
+				x.ExpiresAt = expiresAt.Time.UTC()
+			}
+			_ = tx.Rollback()
+			return x, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return biz.Reservation{}, sanitizeLockerError(ctx, err)
+		}
+	}
 	lockClause := "FOR UPDATE SKIP LOCKED"
 	if !skipLocked {
 		lockClause = "FOR UPDATE"
