@@ -9,13 +9,14 @@ import (
 )
 
 type fakeRepository struct {
-	mu          sync.Mutex
-	device      Device
-	commands    map[string]Command
-	createCalls int
-	markCalls   int
-	complete    []CommandStatus
-	completeErr error
+	mu             sync.Mutex
+	device         Device
+	commands       map[string]Command
+	createCalls    int
+	markCalls      int
+	complete       []CommandStatus
+	completeErr    error
+	rejectCanceled bool
 }
 
 func (r *fakeRepository) UpdateHeartbeat(context.Context, string, time.Time, bool) error { return nil }
@@ -72,9 +73,12 @@ func (r *fakeRepository) MarkRunning(_ context.Context, commandNo string, now ti
 	return false, ErrCommandNotFound
 }
 
-func (r *fakeRepository) CompleteCommand(_ context.Context, commandNo string, status CommandStatus, result GatewayResult, errorCode string) error {
+func (r *fakeRepository) CompleteCommand(ctx context.Context, commandNo string, status CommandStatus, result GatewayResult, errorCode string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.rejectCanceled && ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if r.completeErr != nil {
 		return r.completeErr
 	}
@@ -248,6 +252,27 @@ func TestUseCasePersistsStableTimeoutErrorCode(t *testing.T) {
 	}
 	if !command.Result.Retryable {
 		t.Fatal("timeout result Retryable = false, want true")
+	}
+}
+
+func TestUseCasePersistsTimeoutAfterCallerCancellation(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command), rejectCanceled: true}
+	gateway := &fakeGateway{err: ErrGatewayTimeout}
+	uc := fixedUseCase(repo, gateway, now)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	command, err := uc.Execute(ctx, CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-canceled-timeout"})
+	if !errors.Is(err, ErrGatewayTimeout) {
+		t.Fatalf("error = %v, want ErrGatewayTimeout", err)
+	}
+	if command.Status != CommandTimedOut || command.ErrorCode != ErrorCodeCommandTimeout {
+		t.Fatalf("command = %+v, want timed-out terminal command", command)
+	}
+	persisted := repo.commands["key-canceled-timeout"]
+	if persisted.Status != CommandTimedOut || persisted.ErrorCode != ErrorCodeCommandTimeout {
+		t.Fatalf("persisted = %+v, want timed-out terminal command", persisted)
 	}
 }
 

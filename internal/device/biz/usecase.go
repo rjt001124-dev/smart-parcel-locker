@@ -18,6 +18,8 @@ type UseCase struct {
 	commandSequence  uint64
 }
 
+const terminalPersistenceTimeout = 5 * time.Second
+
 // NewUseCase accepts an optional clock and offline threshold for deterministic tests.
 func NewUseCase(repo Repository, gateway Gateway, options ...interface{}) *UseCase {
 	uc := &UseCase{repo: repo, gateway: gateway, now: func() time.Time { return time.Now().UTC() }, offlineThreshold: 30 * time.Second}
@@ -146,7 +148,7 @@ func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 			errorCode = ErrorCodeCommandFailed
 		}
 	}
-	if err := uc.repo.CompleteCommand(ctx, command.CommandNo, status, result, errorCode); err != nil {
+	if err := uc.completeTerminal(ctx, command.CommandNo, status, result, errorCode); err != nil {
 		return command, err
 	}
 	command.Status, command.Result, command.ErrorCode = status, result, errorCode
@@ -154,12 +156,18 @@ func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 }
 
 func (uc *UseCase) expire(ctx context.Context, command Command) (Command, error) {
-	if err := uc.repo.CompleteCommand(ctx, command.CommandNo, CommandExpired, GatewayResult{}, ErrorCodeCommandExpired); err != nil {
+	if err := uc.completeTerminal(ctx, command.CommandNo, CommandExpired, GatewayResult{}, ErrorCodeCommandExpired); err != nil {
 		return command, err
 	}
 	command.Status = CommandExpired
 	command.ErrorCode = ErrorCodeCommandExpired
 	return command, ErrCommandExpired
+}
+
+func (uc *UseCase) completeTerminal(ctx context.Context, commandNo string, status CommandStatus, result GatewayResult, errorCode string) error {
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), terminalPersistenceTimeout)
+	defer cancel()
+	return uc.repo.CompleteCommand(persistCtx, commandNo, status, result, errorCode)
 }
 
 func (uc *UseCase) validateDevice(device Device) error {
