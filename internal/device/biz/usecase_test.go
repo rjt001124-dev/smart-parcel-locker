@@ -187,6 +187,34 @@ func TestUseCaseReplaysIdempotentCommandWithoutGateway(t *testing.T) {
 	}
 }
 
+func TestUseCaseReplaysSemanticallyEquivalentJSONPayload(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command)}
+	gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+	uc := fixedUseCase(repo, gateway, now)
+
+	firstReq := CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, CellNo: "A1", Payload: []byte(`{"door":{"open":true},"count":1}`), IdempotencyKey: "key-json-semantic"}
+	first, err := uc.Execute(context.Background(), firstReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replayReq := firstReq
+	replayReq.Payload = []byte(`{ "count": 1, "door": { "open": true } }`)
+	second, err := uc.Execute(context.Background(), replayReq)
+	if err != nil {
+		t.Fatalf("semantic replay error = %v", err)
+	}
+	if second.CommandNo != first.CommandNo || gateway.calls != 1 {
+		t.Fatalf("semantic replay = %+v, first = %+v, gateway calls = %d", second, first, gateway.calls)
+	}
+
+	differentReq := replayReq
+	differentReq.Payload = []byte(`{"count":2,"door":{"open":true}}`)
+	if _, err := uc.Execute(context.Background(), differentReq); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different JSON payload error = %v, want ErrIdempotencyConflict", err)
+	}
+}
+
 func TestUseCaseRejectsIdempotencyKeyConflict(t *testing.T) {
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: map[string]Command{

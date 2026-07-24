@@ -3,8 +3,10 @@ package biz
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -201,5 +203,16 @@ func sameCommandRequest(command Command, request CommandRequest) bool {
 	return command.DeviceNo == request.DeviceNo &&
 		command.Action == request.Action &&
 		command.CellNo == request.CellNo &&
-		bytes.Equal(command.Payload, request.Payload)
+		semanticallyEqualJSON(command.Payload, request.Payload)
+}
+
+func semanticallyEqualJSON(left, right []byte) bool {
+	var leftValue, rightValue any
+	if err := json.Unmarshal(left, &leftValue); err != nil {
+		return bytes.Equal(left, right)
+	}
+	if err := json.Unmarshal(right, &rightValue); err != nil {
+		return bytes.Equal(left, right)
+	}
+	return reflect.DeepEqual(leftValue, rightValue)
 }
