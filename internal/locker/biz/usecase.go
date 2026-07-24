@@ -15,7 +15,7 @@ type UseCase struct {
 
 func NewUseCase(repo Repository, marker Marker, now func() time.Time) *UseCase {
 	if now == nil {
-		now = time.Now
+		now = func() time.Time { return time.Now().UTC() }
 	}
 	return &UseCase{repo: repo, marker: marker, now: now}
 }

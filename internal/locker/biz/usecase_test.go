@@ -125,6 +125,27 @@ func TestReserveUsesDefaultAndMaximumTTL(t *testing.T) {
 	}
 }
 
+func TestNewUseCaseDefaultClockUsesUTC(t *testing.T) {
+	previousLocal := time.Local
+	time.Local = time.FixedZone("test-local", 8*60*60)
+	defer func() { time.Local = previousLocal }()
+
+	repo := &fakeRepository{}
+	uc := NewUseCase(repo, nil, nil)
+
+	if _, err := uc.Reserve(context.Background(), ReserveRequest{
+		SiteID:         1,
+		Size:           SizeMedium,
+		ReservationKey: "default-clock",
+		TTL:            MinReservationTTL,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.lastExpires.Location(); got != time.UTC {
+		t.Fatalf("default clock location = %v, want UTC", got)
+	}
+}
+
 func TestReserveRejectsInvalidTTLAndBlankIdempotencyKey(t *testing.T) {
 	repo := &fakeRepository{}
 	uc := NewUseCase(repo, nil, time.Now)
