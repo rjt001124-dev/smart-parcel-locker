@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package locker.v1;
+
+option go_package = "github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1;v1";
+
+import "google/api/annotations.proto";
+import "locker/v1/site.proto";
+
+service InternalLockerService {
+  rpc ReserveCell(ReserveCellRequest) returns (ReserveCellReply) {
+    option (google.api.http) = { post: "/v1/internal/cells/reserve" body: "*" };
+  }
+  rpc ReleaseCell(ReleaseCellRequest) returns (ReleaseCellReply) {
+    option (google.api.http) = { post: "/v1/internal/cells/{cell_id}/release" body: "*" };
+  }
+}
+
+service InternalDeviceService {
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatReply) {
+    option (google.api.http) = { post: "/v1/internal/devices/{device_no}/heartbeat" body: "*" };
+  }
+  rpc CreateDeviceCommand(CreateDeviceCommandRequest) returns (DeviceCommandReply) {
+    option (google.api.http) = { post: "/v1/internal/device-commands" body: "*" };
+  }
+  rpc GetDeviceCommand(GetDeviceCommandRequest) returns (DeviceCommandReply) {
+    option (google.api.http) = { get: "/v1/internal/device-commands/{command_no}" };
+  }
+  rpc SetSimulatorScenario(SetSimulatorScenarioRequest) returns (SetSimulatorScenarioReply) {
+    option (google.api.http) = { put: "/v1/internal/simulator/devices/{device_no}/scenario" body: "*" };
+  }
+}
+
+message ReserveCellRequest {
+  string site_id = 1;
+  CellSize size = 2;
+  int32 ttl_seconds = 3;
+  string idempotency_key = 4;
+}
+
+message ReserveCellReply {
+  string cell_id = 1;
+  string device_no = 2;
+  string cell_no = 3;
+  string expires_at = 4;
+}
+
+message ReleaseCellRequest {
+  string cell_id = 1;
+  string idempotency_key = 2;
+}
+
+message ReleaseCellReply { bool released = 1; }
+
+message HeartbeatRequest {
+  string device_no = 1;
+  string firmware_version = 2;
+  string reported_at = 3;
+  bool online = 4;
+}
+
+message HeartbeatReply { string accepted_at = 1; }
+
+enum DeviceAction {
+  DEVICE_ACTION_UNSPECIFIED = 0;
+  DEVICE_ACTION_OPEN_DOOR = 1;
+  DEVICE_ACTION_QUERY_STATUS = 2;
+}
+
+enum DeviceCommandStatus {
+  DEVICE_COMMAND_STATUS_UNSPECIFIED = 0;
+  DEVICE_COMMAND_STATUS_PENDING = 1;
+  DEVICE_COMMAND_STATUS_RUNNING = 2;
+  DEVICE_COMMAND_STATUS_SUCCEEDED = 3;
+  DEVICE_COMMAND_STATUS_FAILED = 4;
+  DEVICE_COMMAND_STATUS_TIMED_OUT = 5;
+  DEVICE_COMMAND_STATUS_EXPIRED = 6;
+}
+
+message CreateDeviceCommandRequest {
+  string device_no = 1;
+  DeviceAction action = 2;
+  string cell_no = 3;
+  int32 ttl_seconds = 4;
+  string idempotency_key = 5;
+}
+
+message GetDeviceCommandRequest { string command_no = 1; }
+
+message DeviceCommandReply {
+  string command_no = 1;
+  DeviceCommandStatus status = 2;
+  bool retryable = 3;
+  bool door_opened = 4;
+  bool door_closed = 5;
+  string error_code = 6;
+}
+
+enum SimulatorScenario {
+  SIMULATOR_SCENARIO_UNSPECIFIED = 0;
+  SIMULATOR_SCENARIO_ONLINE = 1;
+  SIMULATOR_SCENARIO_OFFLINE = 2;
+  SIMULATOR_SCENARIO_TIMEOUT = 3;
+  SIMULATOR_SCENARIO_FAIL = 4;
+  SIMULATOR_SCENARIO_DOOR_LEFT_OPEN = 5;
+}
+
+message SetSimulatorScenarioRequest {
+  string device_no = 1;
+  SimulatorScenario scenario = 2;
+}
+
+message SetSimulatorScenarioReply { bool updated = 1; }

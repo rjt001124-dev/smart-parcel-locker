@@ -12,6 +12,7 @@ type fakeRepository struct {
 	mu             sync.Mutex
 	device         Device
 	commands       map[string]Command
+	heartbeat      DeviceHeartbeat
 	createCalls    int
 	markCalls      int
 	complete       []CommandStatus
@@ -20,6 +21,13 @@ type fakeRepository struct {
 }
 
 func (r *fakeRepository) UpdateHeartbeat(context.Context, string, time.Time, bool) error { return nil }
+
+func (r *fakeRepository) RecordHeartbeat(_ context.Context, heartbeat DeviceHeartbeat) error {
+	r.mu.Lock()
+	r.heartbeat = heartbeat
+	r.mu.Unlock()
+	return nil
+}
 
 func (r *fakeRepository) FindDevice(context.Context, string) (Device, error) {
 	r.mu.Lock()
@@ -38,6 +46,17 @@ func (r *fakeRepository) FindCommandByIdempotencyKey(_ context.Context, key stri
 		return Command{}, ErrCommandNotFound
 	}
 	return command, nil
+}
+
+func (r *fakeRepository) FindCommand(_ context.Context, commandNo string) (Command, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, command := range r.commands {
+		if command.CommandNo == commandNo {
+			return command, nil
+		}
+	}
+	return Command{}, ErrCommandNotFound
 }
 
 func (r *fakeRepository) CreateCommand(_ context.Context, command Command) (Command, error) {
@@ -380,5 +399,25 @@ func TestUseCaseRejectsUnknownOperationalStatus(t *testing.T) {
 	}
 	if gateway.calls != 0 {
 		t.Fatalf("gateway calls = %d, want 0", gateway.calls)
+	}
+}
+
+func TestUseCaseRecordsHeartbeatAndLooksUpCommand(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	command := Command{CommandNo: "CMD-LOOKUP", DeviceNo: "DEV-001", Status: CommandSucceeded}
+	repo := &fakeRepository{commands: map[string]Command{"lookup": command}}
+	uc := NewUseCase(repo, &fakeGateway{}, func() time.Time { return now })
+
+	reportedAt := now.Add(-time.Second)
+	if err := uc.RecordHeartbeat(context.Background(), DeviceHeartbeat{DeviceNo: "DEV-001", FirmwareVersion: "1.2.3", ReportedAt: reportedAt, Online: true}); err != nil {
+		t.Fatalf("RecordHeartbeat() error = %v", err)
+	}
+	if repo.heartbeat.DeviceNo != "DEV-001" || repo.heartbeat.FirmwareVersion != "1.2.3" || !repo.heartbeat.ReportedAt.Equal(reportedAt) || !repo.heartbeat.Online {
+		t.Fatalf("recorded heartbeat = %+v", repo.heartbeat)
+	}
+
+	got, err := uc.GetCommand(context.Background(), "CMD-LOOKUP")
+	if err != nil || got.CommandNo != command.CommandNo {
+		t.Fatalf("GetCommand() = (%+v, %v)", got, err)
 	}
 }

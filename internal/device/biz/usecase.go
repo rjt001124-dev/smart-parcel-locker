@@ -20,6 +20,25 @@ type UseCase struct {
 	commandSequence  uint64
 }
 
+func (uc *UseCase) RecordHeartbeat(ctx context.Context, heartbeat DeviceHeartbeat) error {
+	if strings.TrimSpace(heartbeat.DeviceNo) == "" {
+		return ErrDeviceNotFound
+	}
+	if heartbeat.ReportedAt.IsZero() {
+		heartbeat.ReportedAt = uc.now().UTC()
+	} else {
+		heartbeat.ReportedAt = heartbeat.ReportedAt.UTC()
+	}
+	return uc.repo.RecordHeartbeat(ctx, heartbeat)
+}
+
+func (uc *UseCase) GetCommand(ctx context.Context, commandNo string) (Command, error) {
+	if strings.TrimSpace(commandNo) == "" {
+		return Command{}, ErrCommandNotFound
+	}
+	return uc.repo.FindCommand(ctx, commandNo)
+}
+
 const terminalPersistenceTimeout = 5 * time.Second
 
 // NewUseCase accepts an optional clock and offline threshold for deterministic tests.

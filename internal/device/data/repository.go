@@ -41,14 +41,27 @@ func NewRepository(db *sql.DB, clocks ...func() time.Time) (*Repository, error) 
 }
 
 func (r *Repository) UpdateHeartbeat(ctx context.Context, deviceNo string, heartbeatAt time.Time, online bool) error {
+	return r.RecordHeartbeat(ctx, devicebiz.DeviceHeartbeat{DeviceNo: deviceNo, ReportedAt: heartbeatAt, Online: online})
+}
+
+func (r *Repository) RecordHeartbeat(ctx context.Context, heartbeat devicebiz.DeviceHeartbeat) error {
 	status := devicebiz.NetworkOffline
-	if online {
+	if heartbeat.Online {
 		status = devicebiz.NetworkOnline
 	}
-	result, err := r.db.ExecContext(ctx, `
+	var result sql.Result
+	var err error
+	if heartbeat.FirmwareVersion == "" {
+		result, err = r.db.ExecContext(ctx, `
 		UPDATE locker_devices
 		SET network_status = ?, last_heartbeat_at = ?
-		WHERE device_no = ?`, status, heartbeatAt.UTC(), deviceNo)
+		WHERE device_no = ?`, status, heartbeat.ReportedAt.UTC(), heartbeat.DeviceNo)
+	} else {
+		result, err = r.db.ExecContext(ctx, `
+		UPDATE locker_devices
+		SET network_status = ?, last_heartbeat_at = ?, firmware_version = ?
+		WHERE device_no = ?`, status, heartbeat.ReportedAt.UTC(), heartbeat.FirmwareVersion, heartbeat.DeviceNo)
+	}
 	if err != nil {
 		return sanitizeDataError(ctx, err)
 	}
@@ -58,7 +71,7 @@ func (r *Repository) UpdateHeartbeat(ctx context.Context, deviceNo string, heart
 	}
 	if n == 0 {
 		var exists int
-		err := r.db.QueryRowContext(ctx, `SELECT 1 FROM locker_devices WHERE device_no = ?`, deviceNo).Scan(&exists)
+		err := r.db.QueryRowContext(ctx, `SELECT 1 FROM locker_devices WHERE device_no = ?`, heartbeat.DeviceNo).Scan(&exists)
 		if errors.Is(err, sql.ErrNoRows) {
 			return devicebiz.ErrDeviceNotFound
 		}
@@ -89,6 +102,14 @@ func (r *Repository) FindDevice(ctx context.Context, deviceNo string) (devicebiz
 }
 
 func (r *Repository) FindCommandByIdempotencyKey(ctx context.Context, key string) (devicebiz.Command, error) {
+	return r.findCommand(ctx, `c.idempotency_key = ?`, key)
+}
+
+func (r *Repository) FindCommand(ctx context.Context, commandNo string) (devicebiz.Command, error) {
+	return r.findCommand(ctx, `c.command_no = ?`, commandNo)
+}
+
+func (r *Repository) findCommand(ctx context.Context, predicate string, value string) (devicebiz.Command, error) {
 	var c devicebiz.Command
 	var payload, result []byte
 	var resultJSON, errorCode sql.NullString
@@ -99,7 +120,7 @@ func (r *Repository) FindCommandByIdempotencyKey(ctx context.Context, key string
 		       c.result_json, c.error_code, c.created_at, c.updated_at
 		FROM device_commands c
 		JOIN locker_devices d ON d.id = c.device_id
-		WHERE c.idempotency_key = ?`, key).
+		WHERE `+predicate, value).
 		Scan(&c.ID, &c.CommandNo, &c.DeviceNo, &c.Action, &payload,
 			&c.CellNo, &c.IdempotencyKey, &c.Status, &c.ExpiresAt, &c.AttemptCount,
 			&resultJSON, &errorCode, &created, &updated)

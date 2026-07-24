@@ -57,6 +57,13 @@ type Device struct {
 	LastHeartbeatAt   time.Time
 }
 
+type DeviceHeartbeat struct {
+	DeviceNo        string
+	FirmwareVersion string
+	ReportedAt      time.Time
+	Online          bool
+}
+
 type Action string
 
 const (
