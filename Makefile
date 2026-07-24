@@ -3,6 +3,14 @@
 BUF_VERSION := v1.50.0
 PROTOC_GEN_GO_VERSION := v1.36.6
 PROTOC_GEN_GO_HTTP_VERSION := v2.0.0-20260404020628-f149714c1d54
+GOOS := $(strip $(shell go env GOOS))
+GO_TOOL_BIN := $(subst \,/,$(strip $(shell go env GOBIN)))
+ifeq ($(GO_TOOL_BIN),)
+GO_TOOL_BIN := $(subst \,/,$(strip $(shell go env GOPATH)))/bin
+endif
+GO_EXE := $(if $(filter windows,$(GOOS)),.exe,)
+PATH_SEPARATOR := $(if $(filter windows,$(GOOS)),;,:)
+BUF := $(GO_TOOL_BIN)/buf$(GO_EXE)
 
 MIGRATIONS := $(CURDIR)/migrations/mysql
 APP_ENV ?= development
@@ -15,15 +23,15 @@ override MYSQL_URL := mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):
 
 .PHONY: tools api-lint api-generate api db-up db-down guard-local confirm-local-reset migrate-up migrate-down migrate-reset-local migrate-cycle
 tools:
-	go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
-	go install github.com/go-kratos/kratos/cmd/protoc-gen-go-http/v2@$(PROTOC_GEN_GO_HTTP_VERSION)
+	GOBIN="$(GO_TOOL_BIN)" go install github.com/bufbuild/buf/cmd/buf@$(BUF_VERSION)
+	GOBIN="$(GO_TOOL_BIN)" go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+	GOBIN="$(GO_TOOL_BIN)" go install github.com/go-kratos/kratos/cmd/protoc-gen-go-http/v2@$(PROTOC_GEN_GO_HTTP_VERSION)
 
 api-lint:
-	buf lint
+	"$(BUF)" lint
 
 api-generate:
-	buf generate
+	PATH="$(GO_TOOL_BIN)$(PATH_SEPARATOR)$${PATH}" "$(BUF)" generate
 
 api: api-lint api-generate
 

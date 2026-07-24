@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
 	kratoserrors "github.com/go-kratos/kratos/v2/errors"
+	khttp "github.com/go-kratos/kratos/v2/transport/http"
 	v1 "github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1"
 	"github.com/rjt001124-dev/smart-parcel-locker/internal/site/biz"
 	annotations "google.golang.org/genproto/googleapis/api/annotations"
@@ -21,6 +25,7 @@ type stubUseCase struct {
 	nearby          []biz.NearbySite
 	nearbyErr       error
 	nearbyQuery     biz.NearbyQuery
+	nearbyCalls     int
 	detail          biz.SiteDetail
 	detailErr       error
 	getSiteID       uint64
@@ -29,6 +34,7 @@ type stubUseCase struct {
 	listCellsSiteID uint64
 	listCellsSize   biz.CellSize
 	listCellsStatus biz.CellStatus
+	listCellsCalls  int
 }
 
 func (s *stubUseCase) ListCities(context.Context) ([]biz.City, error) {
@@ -36,6 +42,7 @@ func (s *stubUseCase) ListCities(context.Context) ([]biz.City, error) {
 }
 
 func (s *stubUseCase) ListNearby(_ context.Context, query biz.NearbyQuery) ([]biz.NearbySite, error) {
+	s.nearbyCalls++
 	s.nearbyQuery = query
 	return s.nearby, s.nearbyErr
 }
@@ -46,10 +53,95 @@ func (s *stubUseCase) GetSite(_ context.Context, siteID uint64) (biz.SiteDetail,
 }
 
 func (s *stubUseCase) ListCells(_ context.Context, siteID uint64, size biz.CellSize, status biz.CellStatus) ([]biz.CellView, error) {
+	s.listCellsCalls++
 	s.listCellsSiteID = siteID
 	s.listCellsSize = size
 	s.listCellsStatus = status
 	return s.cells, s.cellsErr
+}
+
+func TestSiteHTTPHandlerBindsEnumQueries(t *testing.T) {
+	tests := []struct {
+		name       string
+		query      string
+		wantSize   biz.CellSize
+		wantStatus biz.CellStatus
+	}{
+		{name: "symbolic values", query: "size=CELL_SIZE_MEDIUM&status=CELL_STATUS_OCCUPIED", wantSize: biz.CellSizeMedium, wantStatus: biz.CellStatusOccupied},
+		{name: "numeric values", query: "size=2&status=3", wantSize: biz.CellSizeMedium, wantStatus: biz.CellStatusOccupied},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := &stubUseCase{}
+			server := newSiteHTTPServer(t, uc)
+
+			response := serveSiteRequest(server, "/v1/sites/42/cells?"+tt.query)
+
+			if response.Code != http.StatusOK {
+				t.Fatalf("status = %d body = %s, want 200", response.Code, response.Body.String())
+			}
+			if uc.listCellsSiteID != 42 || uc.listCellsSize != tt.wantSize || uc.listCellsStatus != tt.wantStatus {
+				t.Fatalf("ListCells input = (%d, %q, %q), want (42, %q, %q)", uc.listCellsSiteID, uc.listCellsSize, uc.listCellsStatus, tt.wantSize, tt.wantStatus)
+			}
+		})
+	}
+}
+
+func TestSiteHTTPHandlerRejectsMalformedQueryValues(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{name: "invalid enum text", path: "/v1/sites/42/cells?size=not-a-cell-size"},
+		{name: "malformed numeric value", path: "/v1/sites?radius_m=12x"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := &stubUseCase{}
+			response := serveSiteRequest(newSiteHTTPServer(t, uc), tt.path)
+
+			assertHTTPError(t, response, http.StatusBadRequest, "CODEC")
+			if uc.listCellsCalls != 0 || uc.nearbyCalls != 0 {
+				t.Fatalf("use case calls = ListCells %d, ListNearby %d; want no dispatch after binding failure", uc.listCellsCalls, uc.nearbyCalls)
+			}
+		})
+	}
+}
+
+func TestSiteHTTPHandlerPathValueOverridesQueryValue(t *testing.T) {
+	uc := &stubUseCase{}
+	response := serveSiteRequest(newSiteHTTPServer(t, uc), "/v1/sites/42/cells?site_id=99")
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s, want 200", response.Code, response.Body.String())
+	}
+	if uc.listCellsSiteID != 42 {
+		t.Fatalf("ListCells site ID = %d, want path value 42", uc.listCellsSiteID)
+	}
+}
+
+func TestSiteHTTPHandlerReturnsStableSanitizedErrors(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		uc         *stubUseCase
+		wantStatus int
+		wantReason string
+	}{
+		{name: "invalid path ID", path: "/v1/sites/not-a-number", uc: &stubUseCase{}, wantStatus: http.StatusBadRequest, wantReason: "INVALID_SITE_ID"},
+		{name: "internal use case error", path: "/v1/sites/42/cells", uc: &stubUseCase{cellsErr: errors.New("secret database DSN")}, wantStatus: http.StatusServiceUnavailable, wantReason: "SITE_DATA_UNAVAILABLE"},
+		{name: "invalid internal enum", path: "/v1/sites/42/cells", uc: &stubUseCase{cells: []biz.CellView{{ID: 1, CellNo: "A01", Size: biz.CellSize("SECRET_INVALID_SIZE"), Status: biz.CellStatusIdle}}}, wantStatus: http.StatusInternalServerError, wantReason: "INVALID_SITE_DATA"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			response := serveSiteRequest(newSiteHTTPServer(t, tt.uc), tt.path)
+
+			assertHTTPError(t, response, tt.wantStatus, tt.wantReason)
+			if strings.Contains(response.Body.String(), "secret database DSN") || strings.Contains(response.Body.String(), "SECRET_INVALID") {
+				t.Fatalf("HTTP error leaked internal detail: %s", response.Body.String())
+			}
+		})
+	}
 }
 
 func TestNewServiceRejectsNilUseCase(t *testing.T) {
@@ -191,6 +283,55 @@ func TestListCellsForwardsFiltersAndMapsValues(t *testing.T) {
 	}
 }
 
+func TestResponseMappingRejectsInvalidBusinessEnums(t *testing.T) {
+	tests := []struct {
+		name string
+		call func(*Service) error
+	}{
+		{
+			name: "cell size",
+			call: func(service *Service) error {
+				_, err := service.ListCells(context.Background(), &v1.ListCellsRequest{SiteId: "1"})
+				return err
+			},
+		},
+		{
+			name: "cell status",
+			call: func(service *Service) error {
+				_, err := service.ListCells(context.Background(), &v1.ListCellsRequest{SiteId: "1"})
+				return err
+			},
+		},
+		{
+			name: "availability size",
+			call: func(service *Service) error {
+				_, err := service.GetSite(context.Background(), &v1.GetSiteRequest{SiteId: "1"})
+				return err
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			uc := &stubUseCase{}
+			switch tt.name {
+			case "cell size":
+				uc.cells = []biz.CellView{{ID: 1, CellNo: "A01", Size: biz.CellSize("SECRET_INVALID_SIZE"), Status: biz.CellStatusIdle}}
+			case "cell status":
+				uc.cells = []biz.CellView{{ID: 1, CellNo: "A01", Size: biz.CellSizeSmall, Status: biz.CellStatus("SECRET_INVALID_STATUS")}}
+			case "availability size":
+				uc.detail = biz.SiteDetail{Site: biz.Site{ID: 1}, Availability: []biz.CellAvailability{{Size: biz.CellSize("SECRET_INVALID_SIZE"), AvailableCount: 1}}}
+			}
+
+			err := tt.call(mustService(t, uc))
+
+			assertPublicError(t, err, http.StatusInternalServerError, "INVALID_SITE_DATA")
+			if strings.Contains(err.Error(), "SECRET_INVALID") {
+				t.Fatalf("public error leaked invalid internal value: %v", err)
+			}
+		})
+	}
+}
+
 func TestRequestValidationErrorsHaveStableCodesAndReasons(t *testing.T) {
 	service := mustService(t, &stubUseCase{})
 	tests := []struct {
@@ -283,6 +424,7 @@ func TestSiteProtoContractAndHTTPRoutes(t *testing.T) {
 			t.Fatalf("%s HTTP route = %#v, want GET %s", methodName, rule, route)
 		}
 	}
+	assertResponseGraphsExcludeSensitiveFields(t, service)
 
 	wantFields := map[protoreflect.Name][]protoreflect.Name{
 		"City":             {"id", "code", "name", "province"},
@@ -305,11 +447,35 @@ func TestSiteProtoContractAndHTTPRoutes(t *testing.T) {
 				t.Fatalf("%s field %d = %s/%d, want %s/%d", messageName, i, field.Name(), field.Number(), fieldName, i+1)
 			}
 		}
-		for _, sensitive := range []protoreflect.Name{"phone", "contact_phone", "reservation", "device", "device_id", "device_secret"} {
-			if message.Fields().ByName(sensitive) != nil {
-				t.Fatalf("%s exposes sensitive field %s", messageName, sensitive)
+	}
+}
+
+func assertResponseGraphsExcludeSensitiveFields(t *testing.T, service protoreflect.ServiceDescriptor) {
+	t.Helper()
+	forbidden := map[protoreflect.Name]struct{}{
+		"phone": {}, "contact_phone": {}, "reservation": {}, "device": {}, "device_id": {}, "device_secret": {},
+	}
+	visited := make(map[protoreflect.FullName]bool)
+	var visit func(protoreflect.MessageDescriptor)
+	visit = func(message protoreflect.MessageDescriptor) {
+		if visited[message.FullName()] {
+			return
+		}
+		visited[message.FullName()] = true
+		fields := message.Fields()
+		for i := 0; i < fields.Len(); i++ {
+			field := fields.Get(i)
+			if _, sensitive := forbidden[field.Name()]; sensitive {
+				t.Fatalf("response graph exposes sensitive field %s.%s", message.FullName(), field.Name())
+			}
+			if field.Kind() == protoreflect.MessageKind || field.Kind() == protoreflect.GroupKind {
+				visit(field.Message())
 			}
 		}
+	}
+	methods := service.Methods()
+	for i := 0; i < methods.Len(); i++ {
+		visit(methods.Get(i).Output())
 	}
 }
 
@@ -320,6 +486,37 @@ func mustService(t *testing.T, uc UseCase) *Service {
 		t.Fatalf("NewService() error = %v", err)
 	}
 	return service
+}
+
+func newSiteHTTPServer(t *testing.T, uc UseCase) *khttp.Server {
+	t.Helper()
+	service := mustService(t, uc)
+	server := khttp.NewServer()
+	v1.RegisterSiteServiceHTTPServer(server, service)
+	return server
+}
+
+func serveSiteRequest(server *khttp.Server, path string) *httptest.ResponseRecorder {
+	request := httptest.NewRequest(http.MethodGet, path, nil)
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	return response
+}
+
+func assertHTTPError(t *testing.T, response *httptest.ResponseRecorder, code int, reason string) {
+	t.Helper()
+	body := response.Body.Bytes()
+	var public struct {
+		Code    int32  `json:"code"`
+		Reason  string `json:"reason"`
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal(body, &public); err != nil {
+		t.Fatalf("decode HTTP error %q: %v", body, err)
+	}
+	if response.Code != code || int(public.Code) != code || public.Reason != reason {
+		t.Fatalf("HTTP error = status %d body %+v, want code %d reason %q", response.Code, public, code, reason)
+	}
 }
 
 func assertPublicError(t *testing.T, err error, code int, reason string) {

@@ -7,6 +7,8 @@ lint:
   use:
     - STANDARD
   except:
+    # Go Kratos generates conventional *Reply transport types; requiring
+    # *Response names would conflict with the project's public Go API style.
     - RPC_RESPONSE_STANDARD_NAME
 breaking:
   use:

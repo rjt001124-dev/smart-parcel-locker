@@ -103,6 +103,10 @@ func (s *Service) GetSite(ctx context.Context, req *v1.GetSiteRequest) (*v1.GetS
 	if err != nil {
 		return nil, mapUseCaseError(err)
 	}
+	availability, err := mapAvailability(detail.Availability)
+	if err != nil {
+		return nil, err
+	}
 	site := detail.Site
 	return &v1.GetSiteReply{
 		Id:                strconv.FormatUint(site.ID, 10),
@@ -114,7 +118,7 @@ func (s *Service) GetSite(ctx context.Context, req *v1.GetSiteRequest) (*v1.GetS
 		OpenTime:          site.OpenTime,
 		CloseTime:         site.CloseTime,
 		OnlineDeviceCount: 0,
-		Availability:      mapAvailability(detail.Availability),
+		Availability:      availability,
 	}, nil
 }
 
@@ -145,11 +149,19 @@ func (s *Service) ListCells(ctx context.Context, req *v1.ListCellsRequest) (*v1.
 	}
 	reply := &v1.ListCellsReply{Cells: make([]*v1.CellView, 0, len(cells))}
 	for _, cell := range cells {
+		size, err := fromBizCellSize(cell.Size)
+		if err != nil {
+			return nil, err
+		}
+		status, err := fromBizCellStatus(cell.Status)
+		if err != nil {
+			return nil, err
+		}
 		reply.Cells = append(reply.Cells, &v1.CellView{
 			Id:     strconv.FormatUint(cell.ID, 10),
 			CellNo: cell.CellNo,
-			Size:   fromBizCellSize(cell.Size),
-			Status: fromBizCellStatus(cell.Status),
+			Size:   size,
+			Status: status,
 		})
 	}
 	return reply, nil
@@ -195,43 +207,51 @@ func toBizCellStatus(status v1.CellStatus) (biz.CellStatus, error) {
 	}
 }
 
-func fromBizCellSize(size biz.CellSize) v1.CellSize {
+func fromBizCellSize(size biz.CellSize) (v1.CellSize, error) {
 	switch size {
 	case biz.CellSizeSmall:
-		return v1.CellSize_CELL_SIZE_SMALL
+		return v1.CellSize_CELL_SIZE_SMALL, nil
 	case biz.CellSizeMedium:
-		return v1.CellSize_CELL_SIZE_MEDIUM
+		return v1.CellSize_CELL_SIZE_MEDIUM, nil
 	case biz.CellSizeLarge:
-		return v1.CellSize_CELL_SIZE_LARGE
+		return v1.CellSize_CELL_SIZE_LARGE, nil
 	default:
-		return v1.CellSize_CELL_SIZE_UNSPECIFIED
+		return v1.CellSize_CELL_SIZE_UNSPECIFIED, invalidSiteDataError()
 	}
 }
 
-func fromBizCellStatus(status biz.CellStatus) v1.CellStatus {
+func fromBizCellStatus(status biz.CellStatus) (v1.CellStatus, error) {
 	switch status {
 	case biz.CellStatusIdle:
-		return v1.CellStatus_CELL_STATUS_IDLE
+		return v1.CellStatus_CELL_STATUS_IDLE, nil
 	case biz.CellStatusLocked:
-		return v1.CellStatus_CELL_STATUS_LOCKED
+		return v1.CellStatus_CELL_STATUS_LOCKED, nil
 	case biz.CellStatusOccupied:
-		return v1.CellStatus_CELL_STATUS_OCCUPIED
+		return v1.CellStatus_CELL_STATUS_OCCUPIED, nil
 	case biz.CellStatusDisabled:
-		return v1.CellStatus_CELL_STATUS_DISABLED
+		return v1.CellStatus_CELL_STATUS_DISABLED, nil
 	default:
-		return v1.CellStatus_CELL_STATUS_UNSPECIFIED
+		return v1.CellStatus_CELL_STATUS_UNSPECIFIED, invalidSiteDataError()
 	}
 }
 
-func mapAvailability(items []biz.CellAvailability) []*v1.CellAvailability {
+func mapAvailability(items []biz.CellAvailability) ([]*v1.CellAvailability, error) {
 	availability := make([]*v1.CellAvailability, 0, len(items))
 	for _, item := range items {
+		size, err := fromBizCellSize(item.Size)
+		if err != nil {
+			return nil, err
+		}
 		availability = append(availability, &v1.CellAvailability{
-			Size:           fromBizCellSize(item.Size),
+			Size:           size,
 			AvailableCount: item.AvailableCount,
 		})
 	}
-	return availability
+	return availability, nil
+}
+
+func invalidSiteDataError() error {
+	return kratoserrors.InternalServer("INVALID_SITE_DATA", "invalid site data")
 }
 
 func mapUseCaseError(err error) error {
