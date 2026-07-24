@@ -7,8 +7,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -33,7 +35,10 @@ func openDeviceIntegrationDB(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	if err := db.Ping(); err != nil {
-		t.Skipf("mysql unavailable: %v", err)
+		if isUnavailableMySQL(err) {
+			t.Skip("mysql is unavailable")
+		}
+		t.Fatalf("TEST_MYSQL_DSN database setup failed")
 	}
 	t.Cleanup(func() { db.Close() })
 	return db
@@ -57,6 +62,13 @@ func TestRepositoryDeviceCommandRoundTrip(t *testing.T) {
 			t.Fatal(err)
 		}
 		at := time.Now().UTC().Add(-time.Second)
+		targetBefore, err := repo.FindDevice(ctx, "DEV-SH-001")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_, _ = db.ExecContext(context.Background(), `UPDATE locker_devices SET network_status=?, last_heartbeat_at=? WHERE device_no=?`, targetBefore.NetworkStatus, targetBefore.LastHeartbeatAt, targetBefore.DeviceNo)
+		})
 		if err := repo.UpdateHeartbeat(ctx, "DEV-SH-001", at, false); err != nil {
 			t.Fatal(err)
 		}
@@ -99,6 +111,7 @@ func TestRepositoryDeviceCommandRoundTrip(t *testing.T) {
 			CommandNo:      fmt.Sprintf("%020d%06d", time.Now().UnixNano(), len(suffix)),
 			DeviceNo:       "DEV-SH-001",
 			Action:         devicebiz.ActionOpenDoor,
+			CellNo:         "A01",
 			Payload:        []byte(`{"secret":"payload-value","n":1}`),
 			IdempotencyKey: prefix + suffix,
 			Status:         devicebiz.CommandPending,
@@ -114,11 +127,11 @@ func TestRepositoryDeviceCommandRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if string(created.Payload) != string(command.Payload) || created.Status != devicebiz.CommandPending {
+		if string(created.Payload) != string(command.Payload) || created.CellNo != command.CellNo || created.Status != devicebiz.CommandPending {
 			t.Fatalf("created=%+v", created)
 		}
 		found, err := repo.FindCommandByIdempotencyKey(ctx, command.IdempotencyKey)
-		if err != nil || string(found.Payload) != string(command.Payload) {
+		if err != nil || string(found.Payload) != string(command.Payload) || found.CellNo != command.CellNo {
 			t.Fatalf("found=%+v err=%v", found, err)
 		}
 		if err := repo.CompleteCommand(ctx, command.CommandNo, devicebiz.CommandSucceeded, devicebiz.GatewayResult{Opened: true, DoorClosed: true}, ""); !errors.Is(err, ErrCommandNotRunning) {
@@ -182,4 +195,18 @@ func TestRepositoryDeviceCommandRoundTrip(t *testing.T) {
 			t.Fatalf("unsafe invalid payload error=%v", err)
 		}
 	})
+}
+
+func isUnavailableMySQL(err error) bool {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) {
+		var syscallErr syscall.Errno
+		if errors.As(opErr.Err, &syscallErr) {
+			return syscallErr == syscall.ECONNREFUSED || syscallErr == syscall.ETIMEDOUT || syscallErr == syscall.ECONNRESET
+		}
+		message := strings.ToLower(opErr.Err.Error())
+		return strings.Contains(message, "connection refused") || strings.Contains(message, "connection reset") || strings.Contains(message, "i/o timeout")
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "connection refused") || strings.Contains(message, "i/o timeout")
 }

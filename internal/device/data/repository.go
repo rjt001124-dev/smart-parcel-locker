@@ -95,13 +95,13 @@ func (r *Repository) FindCommandByIdempotencyKey(ctx context.Context, key string
 	var created, updated time.Time
 	err := r.db.QueryRowContext(ctx, `
 		SELECT c.id, c.command_no, d.device_no, c.action, c.payload_json,
-		       c.idempotency_key, c.status, c.expires_at, c.attempt_count,
+		       c.cell_no, c.idempotency_key, c.status, c.expires_at, c.attempt_count,
 		       c.result_json, c.error_code, c.created_at, c.updated_at
 		FROM device_commands c
 		JOIN locker_devices d ON d.id = c.device_id
 		WHERE c.idempotency_key = ?`, key).
 		Scan(&c.ID, &c.CommandNo, &c.DeviceNo, &c.Action, &payload,
-			&c.IdempotencyKey, &c.Status, &c.ExpiresAt, &c.AttemptCount,
+			&c.CellNo, &c.IdempotencyKey, &c.Status, &c.ExpiresAt, &c.AttemptCount,
 			&resultJSON, &errorCode, &created, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return devicebiz.Command{}, devicebiz.ErrCommandNotFound
@@ -147,17 +147,21 @@ func (r *Repository) CreateCommand(ctx context.Context, command devicebiz.Comman
 	}
 	if command.CreatedAt.IsZero() {
 		command.CreatedAt = r.now().UTC()
+	} else {
+		command.CreatedAt = command.CreatedAt.UTC()
 	}
 	if command.UpdatedAt.IsZero() {
 		command.UpdatedAt = command.CreatedAt
+	} else {
+		command.UpdatedAt = command.UpdatedAt.UTC()
 	}
 	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO device_commands
-		(command_no, device_id, action, payload_json, idempotency_key, status,
+		(command_no, device_id, cell_no, action, payload_json, idempotency_key, status,
 		 expires_at, attempt_count, result_json, error_code, created_at, updated_at)
-		SELECT ?, id, ?, ?, ?, 'PENDING', ?, 0, NULL, NULL, ?, ?
+		SELECT ?, id, ?, ?, ?, ?, 'PENDING', ?, 0, NULL, NULL, ?, ?
 		FROM locker_devices WHERE device_no = ?`,
-		command.CommandNo, command.Action, payload, command.IdempotencyKey,
+		command.CommandNo, command.CellNo, command.Action, payload, command.IdempotencyKey,
 		command.ExpiresAt, command.CreatedAt, command.UpdatedAt, command.DeviceNo)
 	if err != nil {
 		if isDuplicate(err) {
