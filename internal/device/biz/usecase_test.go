@@ -15,6 +15,7 @@ type fakeRepository struct {
 	createCalls int
 	markCalls   int
 	complete    []CommandStatus
+	completeErr error
 }
 
 func (r *fakeRepository) UpdateHeartbeat(context.Context, string, time.Time, bool) error { return nil }
@@ -74,6 +75,9 @@ func (r *fakeRepository) MarkRunning(_ context.Context, commandNo string, now ti
 func (r *fakeRepository) CompleteCommand(_ context.Context, commandNo string, status CommandStatus, result GatewayResult, errorCode string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.completeErr != nil {
+		return r.completeErr
+	}
 	for key, command := range r.commands {
 		if command.CommandNo == commandNo {
 			command.Status = status
@@ -135,6 +139,21 @@ func TestUseCaseRejectsExpiredCommandBeforeMarkRunning(t *testing.T) {
 	}
 }
 
+func TestUseCasePropagatesExpiryPersistenceFailure(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	persistenceErr := errors.New("expiry persistence unavailable")
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command), completeErr: persistenceErr}
+	uc := fixedUseCase(repo, &fakeGateway{}, now)
+
+	_, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-expiry-persist", ExpiresAt: now.Add(-time.Second)})
+	if !errors.Is(err, persistenceErr) {
+		t.Fatalf("error = %v, want expiry persistence error", err)
+	}
+	if errors.Is(err, ErrCommandExpired) {
+		t.Fatalf("error = %v, must not report expired when persistence failed", err)
+	}
+}
+
 func TestUseCaseReplaysIdempotentCommandWithoutGateway(t *testing.T) {
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command)}
@@ -152,6 +171,12 @@ func TestUseCaseReplaysIdempotentCommandWithoutGateway(t *testing.T) {
 	}
 	if first.CommandNo != second.CommandNo || first.Status != second.Status || first.Result != second.Result {
 		t.Fatalf("replay = %+v, first = %+v", second, first)
+	}
+	if first.AttemptCount != 1 || second.AttemptCount != 1 {
+		t.Fatalf("attempt counts = first:%d second:%d, want both 1", first.AttemptCount, second.AttemptCount)
+	}
+	if persisted := repo.commands[req.IdempotencyKey].AttemptCount; persisted != 1 {
+		t.Fatalf("persisted attempt count = %d, want 1", persisted)
 	}
 	if gateway.calls != 1 {
 		t.Fatalf("gateway calls = %d, want 1", gateway.calls)
@@ -189,6 +214,22 @@ func TestUseCaseRejectsCommandAtMaximumAttempts(t *testing.T) {
 	}
 	if gateway.calls != 0 || repo.markCalls != 0 {
 		t.Fatalf("gateway calls = %d, mark calls = %d, want both 0", gateway.calls, repo.markCalls)
+	}
+}
+
+func TestUseCaseReturnsIncrementedAttemptWhenCompletionFails(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	completionErr := errors.New("completion unavailable")
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command), completeErr: completionErr}
+	gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+	uc := fixedUseCase(repo, gateway, now)
+
+	command, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-attempt"})
+	if !errors.Is(err, completionErr) {
+		t.Fatalf("error = %v, want completion error", err)
+	}
+	if command.AttemptCount != 1 {
+		t.Fatalf("returned attempt count = %d, want 1", command.AttemptCount)
 	}
 }
 
@@ -248,5 +289,20 @@ func TestUseCaseRejectsMaintenanceAndDisabledDevices(t *testing.T) {
 				t.Fatalf("gateway calls = %d, want 0", gateway.calls)
 			}
 		})
+	}
+}
+
+func TestUseCaseRejectsUnknownOperationalStatus(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalStatus("UNKNOWN"), LastHeartbeatAt: now}, commands: make(map[string]Command)}
+	gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+	uc := fixedUseCase(repo, gateway, now)
+
+	_, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-unknown-state"})
+	if !errors.Is(err, ErrInvalidDeviceState) {
+		t.Fatalf("error = %v, want ErrInvalidDeviceState", err)
+	}
+	if gateway.calls != 0 {
+		t.Fatalf("gateway calls = %d, want 0", gateway.calls)
 	}
 }

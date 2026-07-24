@@ -52,9 +52,7 @@ func (uc *UseCase) Execute(ctx context.Context, req CommandRequest) (Command, er
 			return existing, ErrMaxAttempts
 		}
 		if !uc.now().UTC().Before(existing.ExpiresAt) {
-			_ = uc.repo.CompleteCommand(ctx, existing.CommandNo, CommandExpired, GatewayResult{}, "COMMAND_EXPIRED")
-			existing.Status = CommandExpired
-			return existing, ErrCommandExpired
+			return uc.expire(ctx, existing)
 		}
 		return uc.run(ctx, existing)
 	} else if !errors.Is(err, ErrCommandNotFound) {
@@ -97,9 +95,7 @@ func (uc *UseCase) Execute(ctx context.Context, req CommandRequest) (Command, er
 		return Command{}, err
 	}
 	if !now.Before(created.ExpiresAt) {
-		_ = uc.repo.CompleteCommand(ctx, created.CommandNo, CommandExpired, GatewayResult{}, "COMMAND_EXPIRED")
-		created.Status = CommandExpired
-		return created, ErrCommandExpired
+		return uc.expire(ctx, created)
 	}
 	return uc.run(ctx, created)
 }
@@ -111,9 +107,7 @@ func (uc *UseCase) Send(ctx context.Context, req CommandRequest) (Command, error
 func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 	now := uc.now().UTC()
 	if !now.Before(command.ExpiresAt) {
-		_ = uc.repo.CompleteCommand(ctx, command.CommandNo, CommandExpired, GatewayResult{}, "COMMAND_EXPIRED")
-		command.Status = CommandExpired
-		return command, ErrCommandExpired
+		return uc.expire(ctx, command)
 	}
 	if command.AttemptCount >= MaxCommandAttempts {
 		return command, ErrMaxAttempts
@@ -131,15 +125,14 @@ func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 	}
 	if !marked {
 		if !now.Before(command.ExpiresAt) {
-			_ = uc.repo.CompleteCommand(ctx, command.CommandNo, CommandExpired, GatewayResult{}, "COMMAND_EXPIRED")
-			command.Status = CommandExpired
-			return command, ErrCommandExpired
+			return uc.expire(ctx, command)
 		}
 		if command.AttemptCount >= MaxCommandAttempts {
 			return command, ErrMaxAttempts
 		}
 		return command, ErrCommandBusy
 	}
+	command.AttemptCount++
 	result, gatewayErr := uc.gateway.Execute(ctx, GatewayCommand{DeviceNo: command.DeviceNo, Action: command.Action, CellNo: command.CellNo, Payload: command.Payload})
 	status := CommandSucceeded
 	errorCode := ""
@@ -157,8 +150,16 @@ func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 		return command, err
 	}
 	command.Status, command.Result, command.ErrorCode = status, result, errorCode
-	command.AttemptCount++
 	return command, gatewayErr
+}
+
+func (uc *UseCase) expire(ctx context.Context, command Command) (Command, error) {
+	if err := uc.repo.CompleteCommand(ctx, command.CommandNo, CommandExpired, GatewayResult{}, ErrorCodeCommandExpired); err != nil {
+		return command, err
+	}
+	command.Status = CommandExpired
+	command.ErrorCode = ErrorCodeCommandExpired
+	return command, ErrCommandExpired
 }
 
 func (uc *UseCase) validateDevice(device Device) error {
@@ -166,12 +167,14 @@ func (uc *UseCase) validateDevice(device Device) error {
 		return ErrDeviceOffline
 	}
 	switch device.OperationalStatus {
+	case OperationalActive:
+		return nil
 	case OperationalMaintenance:
 		return ErrDeviceMaintenance
 	case OperationalDisabled:
 		return ErrDeviceDisabled
 	default:
-		return nil
+		return ErrInvalidDeviceState
 	}
 }
 

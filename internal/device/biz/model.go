@@ -10,6 +10,7 @@ var (
 	ErrDeviceOffline       = errors.New("device offline")
 	ErrDeviceMaintenance   = errors.New("device in maintenance")
 	ErrDeviceDisabled      = errors.New("device disabled")
+	ErrInvalidDeviceState  = errors.New("invalid device operational state")
 	ErrCommandNotFound     = errors.New("command not found")
 	ErrCommandExpired      = errors.New("command expired")
 	ErrMaxAttempts         = errors.New("maximum command attempts exceeded")
@@ -25,6 +26,7 @@ var (
 const (
 	ErrorCodeCommandTimeout = "DEVICE_COMMAND_TIMEOUT"
 	ErrorCodeCommandFailed  = "DEVICE_COMMAND_FAILED"
+	ErrorCodeCommandExpired = "COMMAND_EXPIRED"
 )
 
 const (
