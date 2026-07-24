@@ -158,6 +158,23 @@ func TestUseCaseReplaysIdempotentCommandWithoutGateway(t *testing.T) {
 	}
 }
 
+func TestUseCaseRejectsIdempotencyKeyConflict(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: map[string]Command{
+		"key-conflict": {CommandNo: "CMD-CONFLICT", DeviceNo: "DEV-001", Action: ActionOpenDoor, CellNo: "A1", Payload: []byte("payload-a"), IdempotencyKey: "key-conflict", Status: CommandSucceeded, ExpiresAt: now.Add(time.Minute)},
+	}}
+	gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+	uc := fixedUseCase(repo, gateway, now)
+
+	_, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-002", Action: ActionOpenDoor, CellNo: "A1", Payload: []byte("payload-a"), IdempotencyKey: "key-conflict"})
+	if !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("error = %v, want ErrIdempotencyConflict", err)
+	}
+	if gateway.calls != 0 {
+		t.Fatalf("gateway calls = %d, want 0", gateway.calls)
+	}
+}
+
 func TestUseCaseRejectsCommandAtMaximumAttempts(t *testing.T) {
 	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
 	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: map[string]Command{
@@ -172,5 +189,64 @@ func TestUseCaseRejectsCommandAtMaximumAttempts(t *testing.T) {
 	}
 	if gateway.calls != 0 || repo.markCalls != 0 {
 		t.Fatalf("gateway calls = %d, mark calls = %d, want both 0", gateway.calls, repo.markCalls)
+	}
+}
+
+func TestUseCasePersistsStableTimeoutErrorCode(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command)}
+	gateway := &fakeGateway{err: ErrGatewayTimeout}
+	uc := fixedUseCase(repo, gateway, now)
+
+	command, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-timeout"})
+	if !errors.Is(err, ErrGatewayTimeout) {
+		t.Fatalf("error = %v, want ErrGatewayTimeout", err)
+	}
+	if command.ErrorCode != "DEVICE_COMMAND_TIMEOUT" {
+		t.Fatalf("error code = %q, want %q", command.ErrorCode, "DEVICE_COMMAND_TIMEOUT")
+	}
+	if !command.Result.Retryable {
+		t.Fatal("timeout result Retryable = false, want true")
+	}
+}
+
+func TestUseCasePersistsStableFailureErrorCode(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: OperationalActive, LastHeartbeatAt: now}, commands: make(map[string]Command)}
+	gateway := &fakeGateway{err: ErrGatewayFailure}
+	uc := fixedUseCase(repo, gateway, now)
+
+	command, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-failure"})
+	if !errors.Is(err, ErrGatewayFailure) {
+		t.Fatalf("error = %v, want ErrGatewayFailure", err)
+	}
+	if command.ErrorCode != "DEVICE_COMMAND_FAILED" {
+		t.Fatalf("error code = %q, want %q", command.ErrorCode, "DEVICE_COMMAND_FAILED")
+	}
+}
+
+func TestUseCaseRejectsMaintenanceAndDisabledDevices(t *testing.T) {
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.UTC)
+	for _, test := range []struct {
+		name   string
+		status OperationalStatus
+		want   error
+	}{
+		{name: "maintenance", status: OperationalMaintenance, want: ErrDeviceMaintenance},
+		{name: "disabled", status: OperationalDisabled, want: ErrDeviceDisabled},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			repo := &fakeRepository{device: Device{DeviceNo: "DEV-001", NetworkStatus: NetworkOnline, OperationalStatus: test.status, LastHeartbeatAt: now}, commands: make(map[string]Command)}
+			gateway := &fakeGateway{result: GatewayResult{Opened: true, DoorClosed: true}}
+			uc := fixedUseCase(repo, gateway, now)
+
+			_, err := uc.Execute(context.Background(), CommandRequest{DeviceNo: "DEV-001", Action: ActionOpenDoor, IdempotencyKey: "key-" + test.name})
+			if !errors.Is(err, test.want) {
+				t.Fatalf("error = %v, want %v", err, test.want)
+			}
+			if gateway.calls != 0 {
+				t.Fatalf("gateway calls = %d, want 0", gateway.calls)
+			}
+		})
 	}
 }

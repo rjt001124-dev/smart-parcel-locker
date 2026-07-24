@@ -39,12 +39,26 @@ func TestSimulatorTimeoutHonorsContextDeadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	started := time.Now()
-	_, err := sim.Execute(ctx, devicebiz.GatewayCommand{DeviceNo: "DEV-001", Action: devicebiz.ActionOpenDoor})
+	result, err := sim.Execute(ctx, devicebiz.GatewayCommand{DeviceNo: "DEV-001", Action: devicebiz.ActionOpenDoor})
 	if !errors.Is(err, devicebiz.ErrGatewayTimeout) {
 		t.Fatalf("error = %v, want ErrGatewayTimeout", err)
 	}
+	if !result.Retryable {
+		t.Fatal("timeout result Retryable = false, want true")
+	}
 	if elapsed := time.Since(started); elapsed > 200*time.Millisecond {
 		t.Fatalf("timeout took %s, want it to honor deadline", elapsed)
+	}
+}
+
+func TestSimulatorQueryStatus(t *testing.T) {
+	sim := NewSimulator()
+	result, err := sim.Execute(context.Background(), devicebiz.GatewayCommand{DeviceNo: "DEV-001", Action: devicebiz.ActionQueryStatus})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Opened || !result.DoorClosed {
+		t.Fatalf("unexpected query status result: %+v", result)
 	}
 }
 

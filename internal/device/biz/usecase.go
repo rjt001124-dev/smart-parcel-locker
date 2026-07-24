@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -41,6 +42,9 @@ func (uc *UseCase) Execute(ctx context.Context, req CommandRequest) (Command, er
 		return Command{}, ErrInvalidAction
 	}
 	if existing, err := uc.repo.FindCommandByIdempotencyKey(ctx, req.IdempotencyKey); err == nil {
+		if !sameCommandRequest(existing, req) {
+			return existing, ErrIdempotencyConflict
+		}
 		if existing.Status != CommandPending {
 			return existing, nil
 		}
@@ -81,6 +85,9 @@ func (uc *UseCase) Execute(ctx context.Context, req CommandRequest) (Command, er
 	if err != nil {
 		if errors.Is(err, ErrIdempotencyConflict) {
 			if existing, findErr := uc.repo.FindCommandByIdempotencyKey(ctx, req.IdempotencyKey); findErr == nil {
+				if !sameCommandRequest(existing, req) {
+					return existing, ErrIdempotencyConflict
+				}
 				if existing.Status != CommandPending {
 					return existing, nil
 				}
@@ -139,10 +146,11 @@ func (uc *UseCase) run(ctx context.Context, command Command) (Command, error) {
 	if gatewayErr != nil {
 		if errors.Is(gatewayErr, ErrGatewayTimeout) || errors.Is(gatewayErr, context.DeadlineExceeded) || errors.Is(gatewayErr, context.Canceled) {
 			status = CommandTimedOut
-			errorCode = "GATEWAY_TIMEOUT"
+			errorCode = ErrorCodeCommandTimeout
+			result.Retryable = true
 		} else {
 			status = CommandFailed
-			errorCode = "GATEWAY_FAILURE"
+			errorCode = ErrorCodeCommandFailed
 		}
 	}
 	if err := uc.repo.CompleteCommand(ctx, command.CommandNo, status, result, errorCode); err != nil {
@@ -176,4 +184,11 @@ func (uc *UseCase) nextCommandNo() string {
 
 func validAction(action Action) bool {
 	return action == ActionOpenDoor || action == ActionQueryStatus
+}
+
+func sameCommandRequest(command Command, request CommandRequest) bool {
+	return command.DeviceNo == request.DeviceNo &&
+		command.Action == request.Action &&
+		command.CellNo == request.CellNo &&
+		bytes.Equal(command.Payload, request.Payload)
 }

@@ -23,6 +23,11 @@ var (
 )
 
 const (
+	ErrorCodeCommandTimeout = "DEVICE_COMMAND_TIMEOUT"
+	ErrorCodeCommandFailed  = "DEVICE_COMMAND_FAILED"
+)
+
+const (
 	DefaultCommandTTL  = time.Minute
 	MaxCommandAttempts = 3
 )

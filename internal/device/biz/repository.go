@@ -8,6 +8,7 @@ import (
 // Repository is the persistence boundary implemented by the MySQL adapter.
 // MarkRunning must atomically check PENDING, expiry, and attempt limits.
 type Repository interface {
+	UpdateHeartbeat(context.Context, string, time.Time, bool) error
 	FindDevice(context.Context, string) (Device, error)
 	FindCommandByIdempotencyKey(context.Context, string) (Command, error)
 	CreateCommand(context.Context, Command) (Command, error)

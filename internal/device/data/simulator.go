@@ -62,9 +62,9 @@ func (s *Simulator) Execute(ctx context.Context, command devicebiz.GatewayComman
 		defer timer.Stop()
 		select {
 		case <-ctx.Done():
-			return devicebiz.GatewayResult{}, fmt.Errorf("%w: %v", devicebiz.ErrGatewayTimeout, ctx.Err())
+			return devicebiz.GatewayResult{Retryable: true}, fmt.Errorf("%w: %v", devicebiz.ErrGatewayTimeout, ctx.Err())
 		case <-timer.C:
-			return devicebiz.GatewayResult{}, devicebiz.ErrGatewayTimeout
+			return devicebiz.GatewayResult{Retryable: true}, devicebiz.ErrGatewayTimeout
 		}
 	default:
 		return devicebiz.GatewayResult{}, ErrUnknownScenario
