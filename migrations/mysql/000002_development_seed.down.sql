@@ -1,6 +1,7 @@
 START TRANSACTION;
 
 -- This rollback is only for the deterministic local fixture before dependent development data is added.
+DELETE FROM device_commands WHERE device_id IN (1, 2);
 DELETE FROM locker_cells
 WHERE (device_id, cell_no) IN (
   (1, 'A01'),

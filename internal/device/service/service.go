@@ -27,6 +27,7 @@ type Service struct {
 }
 
 var _ v1.InternalDeviceServiceHTTPServer = (*Service)(nil)
+var _ v1.InternalSimulatorServiceHTTPServer = (*Service)(nil)
 
 func NewService(uc UseCase, setter ScenarioSetter, simulatorEnabled bool, now func() time.Time) *Service {
 	if now == nil {

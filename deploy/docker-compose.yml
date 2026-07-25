@@ -64,6 +64,30 @@ services:
       timeout: 2s
       retries: 10
 
+  worker:
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.worker
+      args:
+        VERSION: local
+    environment:
+      APP_ENV: development
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-smart_parcel_locker}
+      MYSQL_USER: ${MYSQL_USER:-locker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change-this-local-password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-change-this-local-password}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-this-local-token}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   mysql_data:
   redis_data:

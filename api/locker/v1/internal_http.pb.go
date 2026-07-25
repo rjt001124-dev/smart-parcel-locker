@@ -122,13 +122,11 @@ func (c *InternalLockerServiceHTTPClientImpl) ReserveCell(ctx context.Context, i
 const OperationInternalDeviceServiceCreateDeviceCommand = "/locker.v1.InternalDeviceService/CreateDeviceCommand"
 const OperationInternalDeviceServiceGetDeviceCommand = "/locker.v1.InternalDeviceService/GetDeviceCommand"
 const OperationInternalDeviceServiceHeartbeat = "/locker.v1.InternalDeviceService/Heartbeat"
-const OperationInternalDeviceServiceSetSimulatorScenario = "/locker.v1.InternalDeviceService/SetSimulatorScenario"
 
 type InternalDeviceServiceHTTPServer interface {
 	CreateDeviceCommand(context.Context, *CreateDeviceCommandRequest) (*DeviceCommandReply, error)
 	GetDeviceCommand(context.Context, *GetDeviceCommandRequest) (*DeviceCommandReply, error)
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatReply, error)
-	SetSimulatorScenario(context.Context, *SetSimulatorScenarioRequest) (*SetSimulatorScenarioReply, error)
 }
 
 func RegisterInternalDeviceServiceHTTPServer(s *http.Server, srv InternalDeviceServiceHTTPServer) {
@@ -136,7 +134,6 @@ func RegisterInternalDeviceServiceHTTPServer(s *http.Server, srv InternalDeviceS
 	r.POST("/v1/internal/devices/{device_no}/heartbeat", _InternalDeviceService_Heartbeat0_HTTP_Handler(srv))
 	r.POST("/v1/internal/device-commands", _InternalDeviceService_CreateDeviceCommand0_HTTP_Handler(srv))
 	r.GET("/v1/internal/device-commands/{command_no}", _InternalDeviceService_GetDeviceCommand0_HTTP_Handler(srv))
-	r.PUT("/v1/internal/simulator/devices/{device_no}/scenario", _InternalDeviceService_SetSimulatorScenario0_HTTP_Handler(srv))
 }
 
 func _InternalDeviceService_Heartbeat0_HTTP_Handler(srv InternalDeviceServiceHTTPServer) func(ctx http.Context) error {
@@ -208,36 +205,10 @@ func _InternalDeviceService_GetDeviceCommand0_HTTP_Handler(srv InternalDeviceSer
 	}
 }
 
-func _InternalDeviceService_SetSimulatorScenario0_HTTP_Handler(srv InternalDeviceServiceHTTPServer) func(ctx http.Context) error {
-	return func(ctx http.Context) error {
-		var in SetSimulatorScenarioRequest
-		if err := ctx.Bind(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindQuery(&in); err != nil {
-			return err
-		}
-		if err := ctx.BindVars(&in); err != nil {
-			return err
-		}
-		http.SetOperation(ctx, OperationInternalDeviceServiceSetSimulatorScenario)
-		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
-			return srv.SetSimulatorScenario(ctx, req.(*SetSimulatorScenarioRequest))
-		})
-		out, err := h(ctx, &in)
-		if err != nil {
-			return err
-		}
-		reply := out.(*SetSimulatorScenarioReply)
-		return ctx.Result(200, reply)
-	}
-}
-
 type InternalDeviceServiceHTTPClient interface {
 	CreateDeviceCommand(ctx context.Context, req *CreateDeviceCommandRequest, opts ...http.CallOption) (rsp *DeviceCommandReply, err error)
 	GetDeviceCommand(ctx context.Context, req *GetDeviceCommandRequest, opts ...http.CallOption) (rsp *DeviceCommandReply, err error)
 	Heartbeat(ctx context.Context, req *HeartbeatRequest, opts ...http.CallOption) (rsp *HeartbeatReply, err error)
-	SetSimulatorScenario(ctx context.Context, req *SetSimulatorScenarioRequest, opts ...http.CallOption) (rsp *SetSimulatorScenarioReply, err error)
 }
 
 type InternalDeviceServiceHTTPClientImpl struct {
@@ -287,11 +258,59 @@ func (c *InternalDeviceServiceHTTPClientImpl) Heartbeat(ctx context.Context, in 
 	return &out, nil
 }
 
-func (c *InternalDeviceServiceHTTPClientImpl) SetSimulatorScenario(ctx context.Context, in *SetSimulatorScenarioRequest, opts ...http.CallOption) (*SetSimulatorScenarioReply, error) {
+const OperationInternalSimulatorServiceSetSimulatorScenario = "/locker.v1.InternalSimulatorService/SetSimulatorScenario"
+
+type InternalSimulatorServiceHTTPServer interface {
+	SetSimulatorScenario(context.Context, *SetSimulatorScenarioRequest) (*SetSimulatorScenarioReply, error)
+}
+
+func RegisterInternalSimulatorServiceHTTPServer(s *http.Server, srv InternalSimulatorServiceHTTPServer) {
+	r := s.Route("/")
+	r.PUT("/v1/internal/simulator/devices/{device_no}/scenario", _InternalSimulatorService_SetSimulatorScenario0_HTTP_Handler(srv))
+}
+
+func _InternalSimulatorService_SetSimulatorScenario0_HTTP_Handler(srv InternalSimulatorServiceHTTPServer) func(ctx http.Context) error {
+	return func(ctx http.Context) error {
+		var in SetSimulatorScenarioRequest
+		if err := ctx.Bind(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindQuery(&in); err != nil {
+			return err
+		}
+		if err := ctx.BindVars(&in); err != nil {
+			return err
+		}
+		http.SetOperation(ctx, OperationInternalSimulatorServiceSetSimulatorScenario)
+		h := ctx.Middleware(func(ctx context.Context, req interface{}) (interface{}, error) {
+			return srv.SetSimulatorScenario(ctx, req.(*SetSimulatorScenarioRequest))
+		})
+		out, err := h(ctx, &in)
+		if err != nil {
+			return err
+		}
+		reply := out.(*SetSimulatorScenarioReply)
+		return ctx.Result(200, reply)
+	}
+}
+
+type InternalSimulatorServiceHTTPClient interface {
+	SetSimulatorScenario(ctx context.Context, req *SetSimulatorScenarioRequest, opts ...http.CallOption) (rsp *SetSimulatorScenarioReply, err error)
+}
+
+type InternalSimulatorServiceHTTPClientImpl struct {
+	cc *http.Client
+}
+
+func NewInternalSimulatorServiceHTTPClient(client *http.Client) InternalSimulatorServiceHTTPClient {
+	return &InternalSimulatorServiceHTTPClientImpl{client}
+}
+
+func (c *InternalSimulatorServiceHTTPClientImpl) SetSimulatorScenario(ctx context.Context, in *SetSimulatorScenarioRequest, opts ...http.CallOption) (*SetSimulatorScenarioReply, error) {
 	var out SetSimulatorScenarioReply
 	pattern := "/v1/internal/simulator/devices/{device_no}/scenario"
 	path := binding.EncodeURL(pattern, in, false)
-	opts = append(opts, http.Operation(OperationInternalDeviceServiceSetSimulatorScenario))
+	opts = append(opts, http.Operation(OperationInternalSimulatorServiceSetSimulatorScenario))
 	opts = append(opts, http.PathTemplate(pattern))
 	err := c.cc.Invoke(ctx, "PUT", path, in, &out, opts...)
 	if err != nil {

@@ -26,6 +26,9 @@ service InternalDeviceService {
   rpc GetDeviceCommand(GetDeviceCommandRequest) returns (DeviceCommandReply) {
     option (google.api.http) = { get: "/v1/internal/device-commands/{command_no}" };
   }
+}
+
+service InternalSimulatorService {
   rpc SetSimulatorScenario(SetSimulatorScenarioRequest) returns (SetSimulatorScenarioReply) {
     option (google.api.http) = { put: "/v1/internal/simulator/devices/{device_no}/scenario" body: "*" };
   }

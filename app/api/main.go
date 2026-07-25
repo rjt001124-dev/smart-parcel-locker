@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-kratos/kratos/v2"
+	v1 "github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1"
 	"github.com/rjt001124-dev/smart-parcel-locker/internal/conf"
 	devicebiz "github.com/rjt001124-dev/smart-parcel-locker/internal/device/biz"
 	devicedata "github.com/rjt001124-dev/smart-parcel-locker/internal/device/data"
@@ -29,8 +31,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if cfg.AppEnv != "test" && strings.TrimSpace(cfg.InternalAPIToken) == "" {
-		log.Fatal("INTERNAL_API_TOKEN is required")
+	if err := validateRuntimeConfig(cfg); err != nil {
+		log.Fatal(err)
 	}
 	clients, err := platformdata.Open(context.Background(), cfg)
 	if err != nil {
@@ -68,6 +70,10 @@ func main() {
 	deviceService := deviceservice.NewService(deviceUseCase, func(deviceNo, scenario string) error {
 		return simulator.SetScenario(deviceNo, devicedata.Scenario(scenario))
 	}, cfg.AppEnv != "production", nil)
+	var simulatorService v1.InternalSimulatorServiceHTTPServer
+	if cfg.AppEnv != "production" {
+		simulatorService = deviceService
+	}
 
 	httpServer := server.NewHTTPServer(
 		cfg,
@@ -76,6 +82,7 @@ func main() {
 		siteService,
 		lockerService,
 		deviceService,
+		simulatorService,
 	)
 
 	app := kratos.New(
@@ -86,4 +93,11 @@ func main() {
 	if err = app.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func validateRuntimeConfig(cfg conf.Config) error {
+	if cfg.AppEnv != "test" && strings.TrimSpace(cfg.InternalAPIToken) == "" {
+		return errors.New("INTERNAL_API_TOKEN is required")
+	}
+	return nil
 }

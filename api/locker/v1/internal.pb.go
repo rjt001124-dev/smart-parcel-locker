@@ -912,11 +912,12 @@ const file_locker_v1_internal_proto_rawDesc = "" +
 	"!SIMULATOR_SCENARIO_DOOR_LEFT_OPEN\x10\x052\x85\x02\n" +
 	"\x15InternalLockerService\x12p\n" +
 	"\vReserveCell\x12\x1d.locker.v1.ReserveCellRequest\x1a\x1b.locker.v1.ReserveCellReply\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/internal/cells/reserve\x12z\n" +
-	"\vReleaseCell\x12\x1d.locker.v1.ReleaseCellRequest\x1a\x1b.locker.v1.ReleaseCellReply\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/internal/cells/{cell_id}/release2\xcc\x04\n" +
+	"\vReleaseCell\x12\x1d.locker.v1.ReleaseCellRequest\x1a\x1b.locker.v1.ReleaseCellReply\"/\x82\xd3\xe4\x93\x02):\x01*\"$/v1/internal/cells/{cell_id}/release2\xa5\x03\n" +
 	"\x15InternalDeviceService\x12z\n" +
 	"\tHeartbeat\x12\x1b.locker.v1.HeartbeatRequest\x1a\x19.locker.v1.HeartbeatReply\"5\x82\xd3\xe4\x93\x02/:\x01*\"*/v1/internal/devices/{device_no}/heartbeat\x12\x84\x01\n" +
 	"\x13CreateDeviceCommand\x12%.locker.v1.CreateDeviceCommandRequest\x1a\x1d.locker.v1.DeviceCommandReply\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/internal/device-commands\x12\x88\x01\n" +
-	"\x10GetDeviceCommand\x12\".locker.v1.GetDeviceCommandRequest\x1a\x1d.locker.v1.DeviceCommandReply\"1\x82\xd3\xe4\x93\x02+\x12)/v1/internal/device-commands/{command_no}\x12\xa4\x01\n" +
+	"\x10GetDeviceCommand\x12\".locker.v1.GetDeviceCommandRequest\x1a\x1d.locker.v1.DeviceCommandReply\"1\x82\xd3\xe4\x93\x02+\x12)/v1/internal/device-commands/{command_no}2\xc1\x01\n" +
+	"\x18InternalSimulatorService\x12\xa4\x01\n" +
 	"\x14SetSimulatorScenario\x12&.locker.v1.SetSimulatorScenarioRequest\x1a$.locker.v1.SetSimulatorScenarioReply\">\x82\xd3\xe4\x93\x028:\x01*\x1a3/v1/internal/simulator/devices/{device_no}/scenarioB?Z=github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1;v1b\x06proto3"
 
 var (
@@ -960,13 +961,13 @@ var file_locker_v1_internal_proto_depIdxs = []int32{
 	7,  // 6: locker.v1.InternalDeviceService.Heartbeat:input_type -> locker.v1.HeartbeatRequest
 	9,  // 7: locker.v1.InternalDeviceService.CreateDeviceCommand:input_type -> locker.v1.CreateDeviceCommandRequest
 	10, // 8: locker.v1.InternalDeviceService.GetDeviceCommand:input_type -> locker.v1.GetDeviceCommandRequest
-	12, // 9: locker.v1.InternalDeviceService.SetSimulatorScenario:input_type -> locker.v1.SetSimulatorScenarioRequest
+	12, // 9: locker.v1.InternalSimulatorService.SetSimulatorScenario:input_type -> locker.v1.SetSimulatorScenarioRequest
 	4,  // 10: locker.v1.InternalLockerService.ReserveCell:output_type -> locker.v1.ReserveCellReply
 	6,  // 11: locker.v1.InternalLockerService.ReleaseCell:output_type -> locker.v1.ReleaseCellReply
 	8,  // 12: locker.v1.InternalDeviceService.Heartbeat:output_type -> locker.v1.HeartbeatReply
 	11, // 13: locker.v1.InternalDeviceService.CreateDeviceCommand:output_type -> locker.v1.DeviceCommandReply
 	11, // 14: locker.v1.InternalDeviceService.GetDeviceCommand:output_type -> locker.v1.DeviceCommandReply
-	13, // 15: locker.v1.InternalDeviceService.SetSimulatorScenario:output_type -> locker.v1.SetSimulatorScenarioReply
+	13, // 15: locker.v1.InternalSimulatorService.SetSimulatorScenario:output_type -> locker.v1.SetSimulatorScenarioReply
 	10, // [10:16] is the sub-list for method output_type
 	4,  // [4:10] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
@@ -988,7 +989,7 @@ func file_locker_v1_internal_proto_init() {
 			NumEnums:      3,
 			NumMessages:   11,
 			NumExtensions: 0,
-			NumServices:   2,
+			NumServices:   3,
 		},
 		GoTypes:           file_locker_v1_internal_proto_goTypes,
 		DependencyIndexes: file_locker_v1_internal_proto_depIdxs,
