@@ -1,57 +1,60 @@
 # Smart Parcel Locker
 
-智能快递柜系统，后端采用 Go Kratos。当前包含工程基线、健康检查 API、项目专属 Skill、Docker/CI，以及不依赖付费 MCP 的本地 Figma 设计生成插件。
+智能快递柜项目，后端采用 Go 1.23、Kratos、MySQL 8.4 和 Redis 7。MySQL 保存城市、网点、柜机、柜格、预约与设备命令；Redis 仅提供缓存和临时加速。
 
-## Requirements
-
-- Go 1.23+
-- Python 3.13+
-- Node.js 20+
-- Docker with Compose
-- Figma Desktop（生成设计时需要）
-
-## Run API locally
+## 本地启动
 
 ```powershell
-go run ./app/api
-Invoke-RestMethod http://127.0.0.1:8000/healthz
+Copy-Item .env.example .env
+docker compose -f deploy/docker-compose.yml up -d mysql redis
+make migrate-up
+docker compose -f deploy/docker-compose.yml up -d --build api worker
+Invoke-RestMethod http://127.0.0.1:8000/readyz
 ```
 
-## Verify repository
+Windows 没有 `make` 时，可在 Git Bash 中执行迁移命令，或直接使用项目 `Makefile` 中对应的 `go run ... migrate` 命令。
+
+## 数据表
+
+- `cities`：城市
+- `sites`：服务网点，关联城市
+- `locker_devices`：柜机设备，关联网点
+- `locker_cells`：柜格及预约状态，关联柜机
+- `device_commands`：开门、状态查询等设备命令，关联柜机
+
+Navicat 连接、本地 Volume、Redis 清空恢复及生产隔离说明见 [本地 MySQL/Redis 运维](docs/operations/local-mysql-redis.md)。API 示例见 [站点与设备 API](docs/operations/site-device-api.md)。
+
+## 验证
 
 ```powershell
-gofmt -w app internal
+gofmt -w app api internal tests
+go mod verify
 go vet ./...
 go test ./...
 python scripts/test_agents_rules.py
 python scripts/test_validate_skills.py
 python scripts/validate_skills.py
+git diff --check
 ```
 
-## Build Figma generator
+完整本地烟测：
 
 ```powershell
-Set-Location tools/figma-plugin
-npm install
-npm test -- --run
-npm run typecheck
-npm run build
+powershell -ExecutionPolicy Bypass -File scripts/smoke_site_device.ps1
 ```
 
-导入和运行方法见 `tools/figma-plugin/README.md`。Figma 视觉验收以 `docs/design/figma-qa.md` 为准，批准前不得开始页面实现。
+## Figma
 
-## Run with Docker
+- 原型：[智能快递柜 Figma](https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT)
+- 本地生成插件：`tools/figma-plugin`
+- 设计基线：`docs/design/figma-baseline.md`
+- 视觉验收：`docs/design/figma-qa.md`
 
-```powershell
-docker compose -f deploy/docker-compose.yml up -d --build
-Invoke-RestMethod http://127.0.0.1:8000/healthz
-docker compose -f deploy/docker-compose.yml down
-```
+## 项目规则
 
-## Project guidance
+- 工程规则：`AGENTS.md`
+- 项目 Skills：`.agents/skills/`
+- 里程碑设计：`docs/superpowers/specs/2026-07-18-milestone-3-site-device-design.md`
+- 实施计划：`docs/superpowers/plans/2026-07-18-milestone-3-site-device.md`
 
-- Engineering rules: `AGENTS.md`
-- Project Skills: `.agents/skills/`
-- Approved system design: `docs/superpowers/specs/2026-07-16-smart-parcel-locker-design.md`
-- Local Figma plugin design: `docs/superpowers/specs/2026-07-17-local-figma-generator-plugin-design.md`
-- Local Figma plugin plan: `docs/superpowers/plans/2026-07-17-local-figma-generator-plugin.md`
+仓库不提交 `.env`、生产数据库凭据、Token、支付证书或客户数据。开发、CI 和烟测不得读取桌面上的线上凭据文件。
