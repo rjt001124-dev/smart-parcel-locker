@@ -43,5 +43,7 @@ __pycache__/
 
 # Frontend dependencies and generated outputs
 frontend/node_modules/
+frontend/**/node_modules/
+frontend/**/.swc/
 frontend/apps/miniapp/dist/
 frontend/coverage/
