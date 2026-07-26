@@ -11,6 +11,7 @@
   "dependencies": {
     "@spl/api-client": "*",
     "@spl/design-tokens": "*",
+    "@spl/domain-ui": "*",
     "@tarojs/components": "4.2.1",
     "@tarojs/plugin-framework-react": "4.2.1",
     "@tarojs/plugin-platform-weapp": "4.2.1",
