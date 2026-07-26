@@ -1,0 +1,54 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.home-page__city {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.home-page__search {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f1f5f9;
+}
+
+.current-order {
+  margin-top: 14px;
+  padding: 17px;
+  border-radius: $radius-card;
+  background: $color-primary;
+  color: #fff;
+}
+
+.current-order__label,
+.current-order__title,
+.current-order__hint {
+  display: block;
+}
+
+.current-order__title {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.current-order__hint {
+  margin-top: 6px;
+  opacity: 0.82;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0 10px;
+  font-weight: 700;
+}

@@ -1,0 +1,26 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.sites-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.page-title,
+.page-subtitle {
+  display: block;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.page-subtitle {
+  margin-top: 6px;
+  color: $color-text-secondary;
+}
+
+.sites-page__list {
+  margin-top: 16px;
+}
