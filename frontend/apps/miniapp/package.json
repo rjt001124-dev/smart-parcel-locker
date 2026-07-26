@@ -1,0 +1,39 @@
+{
+  "name": "@spl/miniapp",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "build:weapp": "taro build --type weapp",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tarojs/components": "4.2.1",
+    "@tarojs/plugin-framework-react": "4.2.1",
+    "@tarojs/plugin-platform-weapp": "4.2.1",
+    "@tarojs/react": "4.2.1",
+    "@tarojs/runtime": "4.2.1",
+    "@tarojs/taro": "4.2.1",
+    "@tarojs/vite-runner": "^4.2.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zustand": "5.0.8"
+  },
+  "devDependencies": {
+    "@tarojs/cli": "4.2.1",
+    "@tarojs/vite-runner": "4.2.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@types/react": "18.3.24",
+    "@types/react-dom": "18.3.7",
+    "@babel/plugin-proposal-decorators": "7.28.0",
+    "@babel/plugin-transform-class-properties": "7.27.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "jsdom": "22.1.0",
+    "sass": "1.89.2",
+    "typescript": "5.8.3",
+    "vite": "4.5.14",
+    "vitest": "0.34.6"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "miniprogramRoot": "dist/",
+  "projectname": "smart-parcel-locker-miniapp",
+  "description": "智能快递柜小程序",
+  "appid": "touristappid",
+  "setting": { "es6": true, "enhance": true, "minified": false }
+}
