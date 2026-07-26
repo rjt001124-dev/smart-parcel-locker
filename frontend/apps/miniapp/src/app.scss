@@ -1,6 +1,8 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
 page {
-  background: #f7f9fc;
-  color: #0f172a;
+  background: $color-background;
+  color: $color-text-primary;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 14px;
 }

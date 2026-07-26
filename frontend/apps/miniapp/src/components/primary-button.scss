@@ -1,0 +1,15 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.primary-button {
+  width: 100%;
+  min-height: 44px;
+  border-radius: $radius-button;
+  background: $color-primary;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.primary-button[disabled] {
+  opacity: 0.6;
+}
