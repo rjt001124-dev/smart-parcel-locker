@@ -1,0 +1,52 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.state-panel {
+  padding: 24px 16px;
+  text-align: center;
+  border-radius: $radius-card;
+  background: $color-surface;
+}
+
+.state-panel__title,
+.state-panel__impact,
+.state-panel__trace {
+  display: block;
+}
+
+.state-panel__title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.state-panel__impact {
+  margin-top: 8px;
+  color: $color-text-secondary;
+}
+
+.state-panel__trace {
+  margin-top: 8px;
+  color: $color-text-secondary;
+  font-size: 12px;
+}
+
+.state-panel button {
+  margin-top: 16px;
+  color: #fff;
+  background: $color-primary;
+  border-radius: $radius-button;
+}
+
+.skeleton {
+  background: #e8edf4;
+  border-radius: 12px;
+}
+
+.skeleton--title {
+  width: 45%;
+  height: 24px;
+}
+
+.skeleton--card {
+  height: 160px;
+  margin-top: 16px;
+}

@@ -1,5 +1,6 @@
 import { Input, Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
+import { StatePanel } from "../../components/state-panel";
 import { SiteCard } from "../../features/sites/site-card";
 import { useSites } from "../../features/sites/use-sites";
 import { useLocationStore } from "../../stores/location-store";
@@ -8,6 +9,35 @@ import "./index.scss";
 export default function HomePage() {
   const cityName = useLocationStore((state) => state.cityName);
   const sites = useSites();
+
+  if (sites.status === "loading") {
+    return (
+      <View className="page">
+        <View className="skeleton skeleton--title" />
+        <View className="skeleton skeleton--card" />
+      </View>
+    );
+  }
+
+  if (sites.status === "error") {
+    return (
+      <View className="page">
+        <StatePanel
+          kind={sites.errorCode === "DEVICE_OFFLINE" ? "offline" : "network"}
+          {...(sites.traceId ? { traceId: sites.traceId } : {})}
+          onRetry={() => void sites.retry()}
+        />
+      </View>
+    );
+  }
+
+  if (sites.sites.length === 0) {
+    return (
+      <View className="page">
+        <StatePanel kind="empty" onRetry={() => void sites.retry()} />
+      </View>
+    );
+  }
 
   return (
     <View className="page home-page">
