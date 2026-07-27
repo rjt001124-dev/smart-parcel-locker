@@ -21,7 +21,11 @@ export default function SitesPage() {
     return (
       <View className="page sites-page">
         <StatePanel
-          kind={result.errorCode === "DEVICE_OFFLINE" ? "offline" : "network"}
+          kind={result.errorCode === "LOCATION_UNAVAILABLE"
+            ? "location"
+            : result.errorCode === "DEVICE_OFFLINE"
+              ? "offline"
+              : "network"}
           {...(result.traceId ? { traceId: result.traceId } : {})}
           onRetry={() => void result.retry()}
         />

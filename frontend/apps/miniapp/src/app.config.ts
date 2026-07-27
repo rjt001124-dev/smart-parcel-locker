@@ -11,6 +11,12 @@ export default defineAppConfig({
     navigationBarTextStyle: "black",
     backgroundColor: "#F7F9FC"
   },
+  permission: {
+    "scope.userLocation": {
+      desc: "用于查找附近的智能寄存柜网点"
+    }
+  },
+  requiredPrivateInfos: ["getLocation"],
   tabBar: {
     color: "#64748B",
     selectedColor: "#1769E0",

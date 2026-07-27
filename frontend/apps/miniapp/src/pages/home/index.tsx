@@ -23,7 +23,11 @@ export default function HomePage() {
     return (
       <View className="page">
         <StatePanel
-          kind={sites.errorCode === "DEVICE_OFFLINE" ? "offline" : "network"}
+          kind={sites.errorCode === "LOCATION_UNAVAILABLE"
+            ? "location"
+            : sites.errorCode === "DEVICE_OFFLINE"
+              ? "offline"
+              : "network"}
           {...(sites.traceId ? { traceId: sites.traceId } : {})}
           onRetry={() => void sites.retry()}
         />

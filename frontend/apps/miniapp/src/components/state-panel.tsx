@@ -16,6 +16,11 @@ const copy = {
     title: "设备已离线",
     impact: "当前站点暂时无法开门",
     action: "查看附近网点"
+  },
+  location: {
+    title: "需要位置权限",
+    impact: "授权定位后才能查找附近寄存点",
+    action: "重新定位"
   }
 } as const;
 
