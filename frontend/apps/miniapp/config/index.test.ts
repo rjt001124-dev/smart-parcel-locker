@@ -1,6 +1,8 @@
 // @vitest-environment node
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -49,5 +51,13 @@ describe("Taro build configuration", () => {
       target: "http://127.0.0.1:8000",
       changeOrigin: true
     });
+  });
+
+  it("provides Taro's H5 entry-script placeholder", () => {
+    const html = readFileSync(resolve(__dirname, "../src/index.html"), "utf8");
+
+    expect(html).toContain(
+      "<script><%= htmlWebpackPlugin.options.script %></script>"
+    );
   });
 });

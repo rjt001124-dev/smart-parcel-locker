@@ -18,6 +18,7 @@
 - Modify `frontend/apps/miniapp/config/index.ts`: separate H5 and WeChat output directories, define preview constants, and configure the H5 API proxy.
 - Modify `frontend/apps/miniapp/config/index.test.ts`: verify build constants, output paths, and proxy behavior.
 - Modify `frontend/apps/miniapp/src/types/env.d.ts`: type the two preview-coordinate constants.
+- Create `frontend/apps/miniapp/src/index.html`: provide the required Taro Vite H5 document entry.
 - Modify `frontend/apps/miniapp/src/features/sites/location.ts`: validate coordinates and select preview or runtime positioning by platform.
 - Modify `frontend/apps/miniapp/src/features/sites/location.test.ts`: cover WeChat, H5 preview, H5 browser location, and invalid values.
 - Modify `frontend/apps/miniapp/src/app.scss`: add H5 mobile viewport styling without changing mini-app styling.
@@ -32,6 +33,7 @@
 - Modify: `frontend/apps/miniapp/config/index.ts`
 - Test: `frontend/apps/miniapp/config/index.test.ts`
 - Modify: `frontend/apps/miniapp/src/types/env.d.ts`
+- Create: `frontend/apps/miniapp/src/index.html`
 
 - [ ] **Step 1: Replace the config test with failing H5 expectations**
 

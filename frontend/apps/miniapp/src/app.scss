@@ -8,3 +8,20 @@ page {
 }
 
 button::after { border: 0; }
+
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+  background: $color-background;
+}
+
+@media (min-width: 376px) {
+  #app {
+    width: 375px;
+    min-height: 100vh;
+    margin: 0 auto;
+    box-shadow: 0 0 32px rgb(15 23 42 / 10%);
+  }
+}
