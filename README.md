@@ -43,6 +43,19 @@ git diff --check
 powershell -ExecutionPolicy Bypass -File scripts/smoke_site_device.ps1
 ```
 
+## Frontend
+
+小程序使用 Taro + React + TypeScript，后端继续使用 Go Kratos。详细启动步骤见 [小程序本地开发](docs/operations/miniapp-local-development.md)。
+
+提交前必须运行：
+
+```powershell
+Set-Location frontend
+npm run typecheck
+npm test
+npm run build:miniapp
+```
+
 ## Figma
 
 - 原型：[智能快递柜 Figma](https://www.figma.com/design/ui9lT54QlghpCFiYxiB6WT)
