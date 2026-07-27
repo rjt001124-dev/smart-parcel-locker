@@ -39,3 +39,23 @@ npm run typecheck
 npm test
 npm run build:miniapp
 ```
+
+## 启动 H5 浏览器预览
+
+先启动后端依赖与服务：
+
+```powershell
+docker compose -f deploy/docker-compose.yml up -d mysql redis api worker
+```
+
+然后启动浏览器版：
+
+```powershell
+Set-Location frontend
+npm ci
+npm run dev:h5
+```
+
+浏览器访问 `http://127.0.0.1:10086/index.html`。本地开发命令使用上海预览坐标 `31.2304, 121.4737`，但网点数据仍来自 `http://127.0.0.1:8000` 的真实 API。生产 H5 构建不会自动写入预览坐标。
+
+浏览器开发服务器把 `/api` 代理到本地 Kratos 服务，因此不需要修改后端 CORS，也不会把内部令牌发送到前端。
