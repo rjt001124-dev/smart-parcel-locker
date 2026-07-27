@@ -59,5 +59,6 @@ describe("Taro build configuration", () => {
     expect(html).toContain(
       "<script><%= htmlWebpackPlugin.options.script %></script>"
     );
+    expect(html).toContain('<link rel="icon" href="data:,">');
   });
 });

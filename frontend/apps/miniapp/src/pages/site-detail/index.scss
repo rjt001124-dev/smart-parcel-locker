@@ -6,6 +6,22 @@
   padding: 16px;
 }
 
+.site-detail-page .page-title,
+.site-detail-page .page-subtitle {
+  display: block;
+}
+
+.site-detail-page .page-title {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.site-detail-page .page-subtitle {
+  margin-top: 8px;
+  color: $color-text-secondary;
+  line-height: 1.6;
+}
+
 .locker-counts {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

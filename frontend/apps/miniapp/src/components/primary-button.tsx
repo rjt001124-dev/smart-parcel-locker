@@ -10,7 +10,7 @@ export interface PrimaryButtonProps {
 export function PrimaryButton({ label, loading = false, onClick }: PrimaryButtonProps) {
   return (
     <Button
-      className="primary-button"
+      className={`primary-button${loading ? " primary-button--disabled" : ""}`}
       disabled={loading}
       onClick={onClick}
     >

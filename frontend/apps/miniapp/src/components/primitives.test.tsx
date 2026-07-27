@@ -9,6 +9,7 @@ describe("mini app primitives", () => {
     render(<PrimaryButton loading onClick={onClick} label="查看订单" />);
     fireEvent.click(screen.getByRole("button"));
     expect(onClick).not.toHaveBeenCalled();
+    expect(screen.getByRole("button").className).toContain("primary-button--disabled");
     expect(screen.getByText("处理中…")).toBeTruthy();
   });
 

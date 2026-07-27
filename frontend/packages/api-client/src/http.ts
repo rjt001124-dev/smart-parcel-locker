@@ -1,4 +1,4 @@
-import Taro from "@tarojs/taro";
+import { request as taroRequest } from "@tarojs/taro";
 
 export type AppErrorCode =
   | "NETWORK_FAILURE"
@@ -61,7 +61,7 @@ export function createTaroRequest(baseUrl: string): RequestFn {
     const url = `${normalizedBaseUrl}${input.path}${query ? `?${query}` : ""}`;
 
     try {
-      const response = await Taro.request<T>({ url, method: "GET" });
+      const response = await taroRequest<T>({ url, method: "GET" });
       const traceId = String(response.header["x-request-id"] ?? "") || undefined;
 
       if (response.statusCode < 200 || response.statusCode >= 300) {

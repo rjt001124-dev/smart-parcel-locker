@@ -32,4 +32,28 @@ describe("site client", () => {
 
     expect(JSON.stringify(request.mock.calls)).not.toContain("X-Internal-Token");
   });
+
+  it("normalizes protobuf JSON field names for domain consumers", async () => {
+    const request = vi.fn().mockResolvedValue({
+      sites: [{
+        id: "2",
+        siteNo: "SITE-SH-002",
+        name: "南京东路寄存点",
+        address: "上海市黄浦区南京东路 200 号",
+        latitude: 31.2361,
+        longitude: 121.4802,
+        distanceM: 885,
+        availability: [{ size: "CELL_SIZE_SMALL", availableCount: 2 }]
+      }]
+    });
+    const client = createSiteClient({ request });
+
+    const result = await client.listSites({ cityCode: "310100" });
+
+    expect(result.sites[0]).toMatchObject({
+      site_no: "SITE-SH-002",
+      distance_m: 885,
+      availability: [{ size: "CELL_SIZE_SMALL", available_count: 2 }]
+    });
+  });
 });
