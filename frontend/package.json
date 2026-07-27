@@ -4,6 +4,8 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "build:miniapp": "npm run build:weapp -w @spl/miniapp",
+    "dev:h5": "npm run dev:h5 -w @spl/miniapp",
+    "build:h5": "npm run build:h5 -w @spl/miniapp",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
