@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package locker.v1;
+
+option go_package = "github.com/rjt001124-dev/smart-parcel-locker/api/locker/v1;v1";
+
+import "google/api/annotations.proto";
+import "locker/v1/site.proto";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/orders"
+      body: "*"
+    };
+  }
+  rpc GetOrder(GetOrderRequest) returns (OrderReply) {
+    option (google.api.http) = {get: "/v1/orders/{order_id}"};
+  }
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersReply) {
+    option (google.api.http) = {get: "/v1/orders"};
+  }
+  rpc CancelOrder(CancelOrderRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/orders/{order_id}/cancellations"
+      body: "*"
+    };
+  }
+  // Requests the locker door to open so the parcel can be deposited.
+  // Only valid when the order status is AWAITING_DEPOSIT.
+  rpc OpenDepositDoor(OpenDepositDoorRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/orders/{order_id}/deposit-door-requests"
+      body: "*"
+    };
+  }
+  // Requests the locker door to open so the parcel can be picked up.
+  // Only valid when the order status is IN_STORAGE or AWAITING_PICKUP and
+  // the order is not overdue.
+  rpc OpenPickupDoor(OpenPickupDoorRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/orders/{order_id}/pickup-door-requests"
+      body: "*"
+    };
+  }
+  // Development-only payment simulator. Rejected unless APP_ENV=development.
+  rpc ConfirmDevelopmentPayment(ConfirmDevelopmentPaymentRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/development/orders/{order_id}/payment-confirmations"
+      body: "*"
+    };
+  }
+  // Development-only overdue settlement simulator. Rejected unless APP_ENV=development.
+  rpc SettleOverdue(SettleOverdueRequest) returns (OrderReply) {
+    option (google.api.http) = {
+      post: "/v1/development/orders/{order_id}/overdue-payments"
+      body: "*"
+    };
+  }
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING_PAYMENT = 1;
+  ORDER_STATUS_PAID = 2;
+  ORDER_STATUS_AWAITING_DEPOSIT = 3;
+  ORDER_STATUS_IN_STORAGE = 4;
+  ORDER_STATUS_AWAITING_PICKUP = 5;
+  ORDER_STATUS_OVERDUE = 6;
+  ORDER_STATUS_COMPLETED = 7;
+  ORDER_STATUS_CANCELLED = 8;
+}
+
+// All money fields are integer fen (分). Floating point is forbidden.
+message FeeSnapshot {
+  int64 rent_fee_fen = 1;
+  int64 deposit_fen = 2;
+  int64 discount_fen = 3;
+  int64 total_fen = 4;
+}
+
+message Order {
+  string id = 1;
+  string order_no = 2;
+  string site_id = 3;
+  string site_name = 4;
+  string cell_id = 5;
+  string cell_no = 6;
+  CellSize size = 7;
+  OrderStatus status = 8;
+  int32 duration_minutes = 9;
+  FeeSnapshot fee_snapshot = 10;
+  // Extra amount currently due for an overdue order, integer fen.
+  int64 overdue_fee_fen = 11;
+  string created_at = 12;
+  string paid_at = 13;
+  string deposited_at = 14;
+  string expires_at = 15;
+  string completed_at = 16;
+}
+
+message CreateOrderRequest {
+  string site_id = 1;
+  CellSize size = 2;
+  int32 duration_minutes = 3;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message ListOrdersRequest {}
+
+message ListOrdersReply {
+  repeated Order orders = 1;
+}
+
+message CancelOrderRequest {
+  string order_id = 1;
+}
+
+message OpenDepositDoorRequest {
+  string order_id = 1;
+}
+
+message OpenPickupDoorRequest {
+  string order_id = 1;
+}
+
+message ConfirmDevelopmentPaymentRequest {
+  string order_id = 1;
+}
+
+message SettleOverdueRequest {
+  string order_id = 1;
+}
+
+message OrderReply {
+  Order order = 1;
+}

@@ -17,6 +17,9 @@ import (
 	lockerbiz "github.com/rjt001124-dev/smart-parcel-locker/internal/locker/biz"
 	lockerdata "github.com/rjt001124-dev/smart-parcel-locker/internal/locker/data"
 	lockerservice "github.com/rjt001124-dev/smart-parcel-locker/internal/locker/service"
+	orderbiz "github.com/rjt001124-dev/smart-parcel-locker/internal/order/biz"
+	orderdata "github.com/rjt001124-dev/smart-parcel-locker/internal/order/data"
+	orderservice "github.com/rjt001124-dev/smart-parcel-locker/internal/order/service"
 	platformdata "github.com/rjt001124-dev/smart-parcel-locker/internal/platform/data"
 	"github.com/rjt001124-dev/smart-parcel-locker/internal/server"
 	sitebiz "github.com/rjt001124-dev/smart-parcel-locker/internal/site/biz"
@@ -75,6 +78,16 @@ func main() {
 		simulatorService = deviceService
 	}
 
+	orderRepo, err := orderdata.NewRepository(clients.MySQL, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	orderUseCase := orderbiz.NewUseCase(orderRepo, orderdata.NewDoorSimulator(), nil)
+	orderService, err := orderservice.NewService(orderUseCase, cfg.AppEnv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	httpServer := server.NewHTTPServer(
 		cfg,
 		version,
@@ -83,6 +96,7 @@ func main() {
 		lockerService,
 		deviceService,
 		simulatorService,
+		orderService,
 	)
 
 	app := kratos.New(

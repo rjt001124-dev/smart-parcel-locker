@@ -15,6 +15,7 @@ func NewHTTPServer(
 	lockerService v1.InternalLockerServiceHTTPServer,
 	deviceService v1.InternalDeviceServiceHTTPServer,
 	simulatorService v1.InternalSimulatorServiceHTTPServer,
+	orderService v1.OrderServiceHTTPServer,
 ) *khttp.Server {
 	srv := khttp.NewServer(khttp.Address(cfg.HTTPAddr))
 	RegisterHealth(srv, version)
@@ -32,6 +33,9 @@ func NewHTTPServer(
 	}
 	if simulatorService != nil {
 		v1.RegisterInternalSimulatorServiceHTTPServer(srv, simulatorService)
+	}
+	if orderService != nil {
+		v1.RegisterOrderServiceHTTPServer(srv, orderService)
 	}
 	underlying := srv.Server.Handler
 	srv.Server.Handler = InternalAuth(cfg.InternalAPIToken)(underlying)

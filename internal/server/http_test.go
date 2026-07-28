@@ -17,7 +17,7 @@ func (simulatorServiceStub) SetSimulatorScenario(context.Context, *v1.SetSimulat
 }
 
 func TestHTTPServerDoesNotRegisterSimulatorWhenServiceIsNil(t *testing.T) {
-	srv := NewHTTPServer(conf.Config{InternalAPIToken: "token"}, "test", nil, nil, nil, nil, nil)
+	srv := NewHTTPServer(conf.Config{InternalAPIToken: "token"}, "test", nil, nil, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPut, "/v1/internal/simulator/devices/DEV-1/scenario", nil)
 	req.Header.Set("X-Internal-Token", "token")
 	recorder := httptest.NewRecorder()
@@ -28,7 +28,7 @@ func TestHTTPServerDoesNotRegisterSimulatorWhenServiceIsNil(t *testing.T) {
 }
 
 func TestHTTPServerRegistersSimulatorOnlyWhenProvided(t *testing.T) {
-	srv := NewHTTPServer(conf.Config{InternalAPIToken: "token"}, "test", nil, nil, nil, nil, simulatorServiceStub{})
+	srv := NewHTTPServer(conf.Config{InternalAPIToken: "token"}, "test", nil, nil, nil, nil, simulatorServiceStub{}, nil)
 	req := httptest.NewRequest(http.MethodPut, "/v1/internal/simulator/devices/DEV-1/scenario", nil)
 	req.Header.Set("X-Internal-Token", "token")
 	req.Header.Set("Content-Type", "application/json")
