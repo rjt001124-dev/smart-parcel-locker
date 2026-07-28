@@ -106,9 +106,10 @@ export default function SiteDetailPage() {
       </View>
       <PrimaryButton
         label="选择柜格"
-        onClick={() => void Taro.showToast({
-          title: "柜格预约将在下一阶段开放",
-          icon: "none"
+        onClick={() => void Taro.navigateTo({
+          url:
+            `/pages/locker-selection/index?siteId=${encodeURIComponent(siteId)}` +
+            `&siteName=${encodeURIComponent(site?.name ?? "")}`
         })}
       />
     </View>

@@ -3,7 +3,10 @@ export default defineAppConfig({
     "pages/home/index",
     "pages/location/index",
     "pages/sites/index",
-    "pages/site-detail/index"
+    "pages/site-detail/index",
+    "pages/locker-selection/index",
+    "pages/order-confirm/index",
+    "pages/payment/index"
   ],
   window: {
     navigationBarTitleText: "智能快递柜",

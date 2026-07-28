@@ -30,6 +30,30 @@ describe("public Taro request", () => {
     expect(JSON.stringify(vi.mocked(taroRequest).mock.calls)).not.toContain("X-Internal-Token");
   });
 
+  it("sends POST requests with a JSON body", async () => {
+    vi.mocked(taroRequest).mockResolvedValue({
+      data: { order: { id: "ord-1" } },
+      statusCode: 200,
+      header: {},
+      cookies: [],
+      errMsg: "request:ok"
+    } as never);
+    const request = createTaroRequest("https://api.example.com");
+
+    await request({
+      path: "/v1/orders",
+      method: "POST",
+      data: { site_id: "1", size: "CELL_SIZE_SMALL", duration_minutes: 60 }
+    });
+
+    expect(taroRequest).toHaveBeenCalledWith({
+      url: "https://api.example.com/v1/orders",
+      method: "POST",
+      data: { site_id: "1", size: "CELL_SIZE_SMALL", duration_minutes: 60 },
+      header: { "content-type": "application/json" }
+    });
+  });
+
   it("preserves the request trace ID for not-found errors", async () => {
     vi.mocked(taroRequest).mockResolvedValue({
       data: {},

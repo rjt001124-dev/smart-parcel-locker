@@ -5,7 +5,7 @@
   "scripts": {
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",
-    "dev:h5": "cross-env TARO_APP_API_BASE_URL=/api TARO_APP_PREVIEW_LATITUDE=31.2304 TARO_APP_PREVIEW_LONGITUDE=121.4737 taro build --type h5 --watch",
+    "dev:h5": "cross-env TARO_APP_API_BASE_URL=/api TARO_APP_PREVIEW_LATITUDE=31.2304 TARO_APP_PREVIEW_LONGITUDE=121.4737 TARO_APP_DEV_PAYMENT_SIMULATOR=true taro build --type h5 --watch",
     "build:h5": "taro build --type h5",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

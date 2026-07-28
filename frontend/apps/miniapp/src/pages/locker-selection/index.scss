@@ -1,0 +1,41 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.locker-selection-page {
+  &__section {
+    display: block;
+    margin: 16px 0 8px;
+    color: $color-text-secondary;
+    font-size: 14px;
+  }
+
+  &__options {
+    display: flex;
+    gap: 8px;
+  }
+
+  &__option {
+    flex: 1 1 0;
+    padding: 12px 0;
+    overflow: hidden;
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    background: $color-surface;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+  }
+
+  &__option--active {
+    color: $color-primary;
+    font-weight: 700;
+    background: rgb(23 105 224 / 10%);
+    border-color: $color-primary;
+  }
+
+  &__hint {
+    display: block;
+    margin: 16px 0;
+    color: $color-text-secondary;
+    font-size: 12px;
+  }
+}

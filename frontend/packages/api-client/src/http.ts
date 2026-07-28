@@ -20,7 +20,9 @@ export class AppError extends Error {
 
 export interface RequestInput {
   path: string;
+  method?: "GET" | "POST";
   query?: Record<string, string | number | boolean | undefined>;
+  data?: Record<string, unknown>;
 }
 
 export type RequestFn = <T>(input: RequestInput) => Promise<T>;
@@ -61,7 +63,17 @@ export function createTaroRequest(baseUrl: string): RequestFn {
     const url = `${normalizedBaseUrl}${input.path}${query ? `?${query}` : ""}`;
 
     try {
-      const response = await taroRequest<T>({ url, method: "GET" });
+      const method = input.method ?? "GET";
+      const response = await taroRequest<T>(
+        method === "POST"
+          ? {
+              url,
+              method,
+              data: input.data ?? {},
+              header: { "content-type": "application/json" }
+            }
+          : { url, method }
+      );
       const traceId = String(response.header["x-request-id"] ?? "") || undefined;
 
       if (response.statusCode < 200 || response.statusCode >= 300) {

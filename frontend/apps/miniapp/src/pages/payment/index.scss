@@ -1,0 +1,30 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.payment-page {
+  &__status {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 12px 0;
+  }
+
+  &__order-no {
+    overflow: hidden;
+    color: $color-text-secondary;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  &__hint {
+    display: block;
+    margin-top: 16px;
+    color: $color-text-secondary;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .fee-summary {
+    margin-bottom: 16px;
+  }
+}
