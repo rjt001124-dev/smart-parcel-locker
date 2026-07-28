@@ -5,6 +5,10 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/frontend.yml"
+  push:
+    branches:
+      - "codex/milestone-3-site-device"
+      - "main"
 
 jobs:
   miniapp:
@@ -23,3 +27,4 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build:miniapp
+      - run: npm run build:h5
