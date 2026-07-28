@@ -1,0 +1,38 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.fee-summary {
+  padding: 16px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.fee-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.fee-summary__row--total {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid $color-border;
+
+  .fee-summary__label,
+  .fee-summary__value {
+    font-weight: 700;
+    color: $color-text-primary;
+  }
+}
+
+.fee-summary__label {
+  color: $color-text-secondary;
+  font-size: 14px;
+}
+
+.fee-summary__value {
+  color: $color-text-primary;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
