@@ -6,7 +6,10 @@ import SitesPage from "./sites";
 vi.mock("@tarojs/taro", () => ({
   default: {
     navigateTo: vi.fn(),
-    getLocation: vi.fn()
+    getLocation: vi.fn(),
+    getStorageSync: vi.fn().mockReturnValue(""),
+    setStorageSync: vi.fn(),
+    removeStorageSync: vi.fn()
   },
   navigateTo: vi.fn(),
   getLocation: vi.fn()

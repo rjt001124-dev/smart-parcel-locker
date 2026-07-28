@@ -3,33 +3,18 @@ import { getCurrentInstance } from "@tarojs/taro";
 import { useCallback, useEffect, useState } from "react";
 import { createTaroRequest } from "@spl/api-client/http";
 import { createOrderClient, type OrderDto } from "@spl/api-client/order-client";
-import { toOrderStatusView, type OrderStatus } from "@spl/domain-ui/order";
 
 import { FeeSummary } from "../../components/fee-summary";
 import { PrimaryButton } from "../../components/primary-button";
 import { StatePanel } from "../../components/state-panel";
 import { StatusPill } from "../../components/status-pill";
+import { devPaymentSimulatorEnabled, statusPillTone } from "../../features/orders/use-order";
+import { toOrderStatusView } from "@spl/domain-ui/order";
 import "./index.scss";
 
 const API_BASE_URL =
   typeof TARO_APP_API_BASE_URL !== "undefined" ? TARO_APP_API_BASE_URL : "";
 const client = createOrderClient({ request: createTaroRequest(API_BASE_URL) });
-
-/** Development-only payment simulator switch; never enabled in production builds. */
-function devPaymentSimulatorEnabled(): boolean {
-  return (
-    typeof TARO_APP_DEV_PAYMENT_SIMULATOR !== "undefined" &&
-    TARO_APP_DEV_PAYMENT_SIMULATOR === "true"
-  );
-}
-
-function pillTone(status: OrderStatus): "success" | "warning" | "danger" | "neutral" {
-  const tone = toOrderStatusView(status).tone;
-  if (tone === "success") return "success";
-  if (tone === "warning") return "warning";
-  if (tone === "danger") return "danger";
-  return "neutral";
-}
 
 type LoadState = "loading" | "success" | "error";
 
@@ -92,7 +77,7 @@ export default function PaymentPage() {
     <View className="page payment-page">
       <Text className="page-title">订单支付</Text>
       <View className="payment-page__status">
-        <StatusPill label={statusView.label} tone={pillTone(order.status)} />
+        <StatusPill label={statusView.label} tone={statusPillTone(order.status)} />
         <Text className="payment-page__order-no">订单号 {order.order_no}</Text>
       </View>
       <FeeSummary

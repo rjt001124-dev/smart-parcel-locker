@@ -1,0 +1,68 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.orders-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.orders-page .page-title {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.order-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.order-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.order-row__site {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.order-row__meta {
+  overflow: hidden;
+  color: $color-text-secondary;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.orders-page__empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 48px 16px;
+  text-align: center;
+}
+
+.orders-page__empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.orders-page__empty-hint {
+  font-size: 13px;
+  color: $color-text-secondary;
+}

@@ -6,7 +6,12 @@ export default defineAppConfig({
     "pages/site-detail/index",
     "pages/locker-selection/index",
     "pages/order-confirm/index",
-    "pages/payment/index"
+    "pages/payment/index",
+    "pages/orders/index",
+    "pages/order-detail/index",
+    "pages/store/index",
+    "pages/pickup/index",
+    "pages/overdue/index"
   ],
   window: {
     navigationBarTitleText: "智能快递柜",
@@ -26,6 +31,7 @@ export default defineAppConfig({
     backgroundColor: "#FFFFFF",
     list: [
       { pagePath: "pages/home/index", text: "首页" },
+      { pagePath: "pages/orders/index", text: "订单" },
       { pagePath: "pages/sites/index", text: "网点" }
     ]
   }

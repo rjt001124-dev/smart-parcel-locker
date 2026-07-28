@@ -24,7 +24,7 @@
 .current-order {
   margin-top: 14px;
   padding: 17px;
-  border-radius: $radius-card;
+  border-radius: 8px;
   background: $color-primary;
   color: #fff;
 }
@@ -44,6 +44,17 @@
 .current-order__hint {
   margin-top: 6px;
   opacity: 0.82;
+}
+
+.current-order__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.current-order__status .current-order__hint {
+  margin-top: 0;
 }
 
 .section-heading {

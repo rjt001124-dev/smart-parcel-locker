@@ -1,14 +1,82 @@
 import { Input, Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
-import { StatePanel } from "../../components/state-panel";
+import { useEffect } from "react";
+import { toOrderStatusView, type OrderStatus } from "@spl/domain-ui/order";
+
 import { SiteCard } from "../../features/sites/site-card";
 import { useSites } from "../../features/sites/use-sites";
 import { useLocationStore } from "../../stores/location-store";
+import { useActiveOrderStore } from "../../stores/active-order-store";
+import { statusPillTone, useOrder } from "../../features/orders/use-order";
+import { StatePanel } from "../../components/state-panel";
+import { StatusPill } from "../../components/status-pill";
 import "./index.scss";
 
 export default function HomePage() {
   const cityName = useLocationStore((state) => state.cityName);
   const sites = useSites();
+
+  const activeOrderId = useActiveOrderStore((state) => state.activeOrderId);
+  const hydrateActiveOrder = useActiveOrderStore((state) => state.hydrate);
+  const clearActiveOrder = useActiveOrderStore((state) => state.clearActiveOrder);
+  const { order: activeOrder, loadState: activeLoadState } = useOrder(activeOrderId ?? "");
+
+  useEffect(() => {
+    hydrateActiveOrder();
+  }, [hydrateActiveOrder]);
+
+  useEffect(() => {
+    if (
+      activeOrder &&
+      (activeOrder.status === "ORDER_STATUS_COMPLETED" ||
+        activeOrder.status === "ORDER_STATUS_CANCELLED")
+    ) {
+      clearActiveOrder();
+    }
+  }, [activeOrder, clearActiveOrder]);
+
+  const renderActiveOrder = () => {
+    if (!activeOrderId) {
+      return (
+        <View className="current-order current-order--empty">
+          <Text className="current-order__label">当前订单</Text>
+          <Text className="current-order__title">暂无进行中的订单</Text>
+          <Text className="current-order__hint">选择附近网点开始寄存</Text>
+        </View>
+      );
+    }
+
+    if (activeLoadState === "loading" || !activeOrder) {
+      return (
+        <View className="current-order">
+          <View className="skeleton skeleton--title" />
+        </View>
+      );
+    }
+
+    return (
+      <View
+        className="current-order"
+        onClick={() =>
+          void Taro.navigateTo({
+            url: `/pages/order-detail/index?orderId=${encodeURIComponent(activeOrderId)}`
+          })
+        }
+      >
+        <Text className="current-order__label">当前订单</Text>
+        <Text className="current-order__title">
+          {activeOrder.site_name} · 柜格 {activeOrder.cell_no}
+        </Text>
+        <View className="current-order__status">
+          <StatusPill
+            label={toOrderStatusView(activeOrder.status as OrderStatus).label}
+            tone={statusPillTone(activeOrder.status as OrderStatus)}
+          />
+          <Text className="current-order__hint">点击查看</Text>
+        </View>
+      </View>
+    );
+  };
 
   if (sites.status === "loading") {
     return (
@@ -52,11 +120,7 @@ export default function HomePage() {
         {cityName} · 定位成功
       </Text>
       <Input className="home-page__search" placeholder="搜索商场、地铁站或地址" />
-      <View className="current-order current-order--empty">
-        <Text className="current-order__label">当前订单</Text>
-        <Text className="current-order__title">暂无进行中的订单</Text>
-        <Text className="current-order__hint">选择附近网点开始寄存</Text>
-      </View>
+      {renderActiveOrder()}
       <View className="section-heading">
         <Text>附近寄存点</Text>
         <Text onClick={() => Taro.navigateTo({ url: "/pages/sites/index" })}>查看全部</Text>

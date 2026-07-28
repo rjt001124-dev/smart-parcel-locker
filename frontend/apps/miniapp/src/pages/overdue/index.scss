@@ -1,0 +1,38 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.overdue-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.overdue-page__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.overdue-page .page-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.overdue-page__site {
+  display: block;
+  margin-bottom: 12px;
+  overflow: hidden;
+  color: $color-text-secondary;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.overdue-page__hint {
+  display: block;
+  margin-top: 16px;
+  color: $color-text-secondary;
+  font-size: 14px;
+  text-align: center;
+}
