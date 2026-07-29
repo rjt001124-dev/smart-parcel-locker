@@ -1,4 +1,4 @@
-import { Text, View } from "@tarojs/components";
+import { Input, Text, View } from "@tarojs/components";
 import Taro, { getCurrentInstance } from "@tarojs/taro";
 import { useCallback, useState } from "react";
 import { createTaroRequest } from "@spl/api-client/http";
@@ -21,9 +21,44 @@ export default function PickupPage() {
   const orderId = getCurrentInstance().router?.params.orderId ?? "";
   const { order, loadState, traceId, reload } = useOrder(orderId);
   const [phase, setPhase] = useState<DoorPhase>("idle");
+  const [pickupCode, setPickupCode] = useState("");
+  const [codeError, setCodeError] = useState(false);
+
+  const codeMatches = order != null && pickupCode.trim() === order.cell_no;
+
+  const onCodeInput = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
+      const detail = e?.detail as { value?: string } | undefined;
+      const target = e?.target as { value?: string } | undefined;
+      const value = (detail?.value ?? target?.value ?? "").trim();
+      setPickupCode(value);
+      if (value.length === 0) {
+        setCodeError(false);
+      } else if (order && value !== order.cell_no) {
+        setCodeError(true);
+      } else {
+        setCodeError(false);
+      }
+    },
+    [order]
+  );
+
+  const verifyCode = useCallback(() => {
+    if (!order) return;
+    if (pickupCode.trim() !== order.cell_no) {
+      setCodeError(true);
+      return;
+    }
+    setCodeError(false);
+  }, [order, pickupCode]);
 
   const open = useCallback(async () => {
     if (phase === "opening") return;
+    if (!codeMatches) {
+      setCodeError(true);
+      return;
+    }
     setPhase("opening");
     try {
       // Door "opened" is driven ONLY by the server reply — never fabricated.
@@ -33,7 +68,7 @@ export default function PickupPage() {
     } catch {
       setPhase("failed");
     }
-  }, [orderId, phase, reload]);
+  }, [orderId, phase, reload, codeMatches]);
 
   if (loadState === "loading") {
     return (
@@ -92,11 +127,28 @@ export default function PickupPage() {
           />
         </View>
       ) : (
-        <DoorStatusPanel
-          phase={phase}
-          actionLabel="开门取件"
-          onAction={() => void open()}
-        />
+        <View className="pickup-page__code-section">
+          <Text className="pickup-page__code-hint">
+            请输入柜格号 {order.cell_no} 确认取件
+          </Text>
+          <Input
+            className="pickup-page__code-input"
+            placeholder="请输入柜格号"
+            value={pickupCode}
+            onInput={onCodeInput}
+            onBlur={verifyCode}
+          />
+          {codeError && (
+            <Text className="pickup-page__code-error">柜格号不匹配</Text>
+          )}
+          {codeMatches ? (
+            <DoorStatusPanel
+              phase={phase}
+              actionLabel="开门取件"
+              onAction={() => void open()}
+            />
+          ) : null}
+        </View>
       )}
     </View>
   );

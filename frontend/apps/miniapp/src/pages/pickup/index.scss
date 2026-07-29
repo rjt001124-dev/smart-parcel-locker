@@ -56,3 +56,30 @@
   border: 1px solid $color-border;
   border-radius: 8px;
 }
+
+.pickup-page__code-section {
+  margin-top: 16px;
+}
+
+.pickup-page__code-hint {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: $color-text-secondary;
+}
+
+.pickup-page__code-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 16px;
+}
+
+.pickup-page__code-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: $color-danger;
+}

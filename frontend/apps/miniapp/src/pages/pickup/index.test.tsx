@@ -54,6 +54,11 @@ const AWAITING_PICKUP_ORDER = {
   created_at: "", paid_at: "", deposited_at: "", expires_at: "", completed_at: ""
 };
 
+async function enterPickupCode(code: string) {
+  const input = screen.getByPlaceholderText(/请输入柜格号/);
+  fireEvent.input(input, { target: { value: code } });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   routerParams = { orderId: "ord-1" };
@@ -63,24 +68,68 @@ afterEach(() => {
 });
 
 describe("PickupPage", () => {
-  it("renders order info and an idle pickup panel", async () => {
+  it("renders order info and a pickup code input", async () => {
     getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
     render(<PickupPage />);
 
     await waitFor(() => {
       expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
     });
+    expect(screen.getByPlaceholderText(/请输入柜格号/)).toBeInTheDocument();
+  });
+
+  it("does not show the door-open button until the correct code is entered", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("开门取件")).not.toBeInTheDocument();
+
+    await enterPickupCode("A-01");
     expect(screen.getByText("开门取件")).toBeInTheDocument();
   });
 
-  it("opens the pickup door only after a server success", async () => {
+  it("shows an error when the pickup code does not match", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    await enterPickupCode("B-99");
+    expect(screen.getByText("柜格号不匹配")).toBeInTheDocument();
+    expect(screen.queryByText("开门取件")).not.toBeInTheDocument();
+  });
+
+  it("clears the error and enables open when the correct code is entered", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    await enterPickupCode("B-99");
+    expect(screen.getByText("柜格号不匹配")).toBeInTheDocument();
+
+    await enterPickupCode("A-01");
+    expect(screen.queryByText("柜格号不匹配")).not.toBeInTheDocument();
+    expect(screen.getByText("开门取件")).toBeInTheDocument();
+  });
+
+  it("opens the pickup door only after correct code and server success", async () => {
     getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
     openPickupDoor.mockResolvedValue(AWAITING_PICKUP_ORDER);
     render(<PickupPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("开门取件")).toBeInTheDocument();
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
     });
+
+    await enterPickupCode("A-01");
     fireEvent.click(screen.getByText("开门取件"));
 
     await waitFor(() => {
@@ -95,8 +144,10 @@ describe("PickupPage", () => {
     render(<PickupPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("开门取件")).toBeInTheDocument();
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
     });
+
+    await enterPickupCode("A-01");
     fireEvent.click(screen.getByText("开门取件"));
 
     await waitFor(() => {
