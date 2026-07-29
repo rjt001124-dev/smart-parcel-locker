@@ -11,7 +11,8 @@ export default defineAppConfig({
     "pages/order-detail/index",
     "pages/store/index",
     "pages/pickup/index",
-    "pages/overdue/index"
+    "pages/overdue/index",
+    "pages/me/index"
   ],
   window: {
     navigationBarTitleText: "智能快递柜",
@@ -32,7 +33,8 @@ export default defineAppConfig({
     list: [
       { pagePath: "pages/home/index", text: "首页" },
       { pagePath: "pages/orders/index", text: "订单" },
-      { pagePath: "pages/sites/index", text: "网点" }
+      { pagePath: "pages/sites/index", text: "网点" },
+      { pagePath: "pages/me/index", text: "我的" }
     ]
   }
 });
