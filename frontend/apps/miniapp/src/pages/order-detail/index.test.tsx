@@ -126,3 +126,44 @@ describe("OrderDetailPage", () => {
     });
   });
 });
+
+describe("OrderDetailPage auto-refresh", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+    routerParams = { orderId: "ord-1" };
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    delete (globalThis as Record<string, unknown>).TARO_APP_API_BASE_URL;
+  });
+
+  it("polls order status every 5 seconds for non-terminal orders", async () => {
+    getOrder.mockResolvedValue(AWAITING_DEPOSIT_ORDER);
+    render(<OrderDetailPage />);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getOrder).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getOrder).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(getOrder).toHaveBeenCalledTimes(3);
+  });
+
+  it("stops polling when order reaches a terminal status", async () => {
+    const completedOrder = {
+      ...AWAITING_DEPOSIT_ORDER,
+      status: "ORDER_STATUS_COMPLETED" as const
+    };
+    getOrder.mockResolvedValue(completedOrder);
+    render(<OrderDetailPage />);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(getOrder).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(getOrder).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,6 +1,6 @@
 import { Text, View } from "@tarojs/components";
 import Taro, { getCurrentInstance } from "@tarojs/taro";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createTaroRequest } from "@spl/api-client/http";
 import { createOrderClient, type OrderDto } from "@spl/api-client/order-client";
 import {
@@ -32,6 +32,22 @@ export default function OrderDetailPage() {
   const { order, loadState, code, traceId, reload } = useOrder(orderId);
   const [contactOpen, setContactOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+
+  // Auto-refresh order status every 5 seconds while the order is non-terminal.
+  const POLL_INTERVAL_MS = 5000;
+  useEffect(() => {
+    if (!order) return;
+    const isTerminal =
+      order.status === "ORDER_STATUS_COMPLETED" ||
+      order.status === "ORDER_STATUS_CANCELLED";
+    if (isTerminal) return;
+
+    const interval = setInterval(() => {
+      void reload();
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [order, reload]);
 
   const onAction = useCallback(
     async (action: OrderAction) => {
