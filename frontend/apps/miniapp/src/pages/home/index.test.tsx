@@ -15,19 +15,37 @@ vi.mock("@tarojs/taro", () => ({
   getCurrentInstance: () => ({ router: { params: {} } })
 }));
 
+const MOCK_SITES = [
+  {
+    id: "1",
+    name: "人民广场寄存点",
+    address: "南京东路",
+    distanceMeters: 500,
+    onlineDeviceCount: 3,
+    cellCounts: { small: 1, medium: 2, large: 0 }
+  },
+  {
+    id: "2",
+    name: "徐家汇寄存点",
+    address: "肇嘉浜路",
+    distanceMeters: 1200,
+    onlineDeviceCount: 2,
+    cellCounts: { small: 0, medium: 1, large: 1 }
+  },
+  {
+    id: "3",
+    name: "陆家嘴地铁站寄存点",
+    address: "浦东陆家嘴",
+    distanceMeters: 2000,
+    onlineDeviceCount: 1,
+    cellCounts: { small: 2, medium: 0, large: 0 }
+  }
+];
+
 vi.mock("../../features/sites/use-sites", () => ({
   useSites: () => ({
     status: "success",
-    sites: [
-      {
-        id: "1",
-        name: "人民广场寄存点",
-        address: "南京东路",
-        distanceMeters: 500,
-        onlineDeviceCount: 3,
-        cellCounts: { small: 1, medium: 2, large: 0 }
-      }
-    ],
+    sites: MOCK_SITES,
     retry: vi.fn()
   })
 }));
@@ -94,5 +112,55 @@ describe("HomePage active order card", () => {
     expect(navigateTo).toHaveBeenCalledWith({
       url: "/pages/order-detail/index?orderId=ord-1"
     });
+  });
+});
+
+describe("HomePage search", () => {
+  it("shows only the first two sites by default", async () => {
+    render(<HomePage />);
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+    expect(screen.getByText("徐家汇寄存点")).toBeInTheDocument();
+    expect(screen.queryByText("陆家嘴地铁站寄存点")).not.toBeInTheDocument();
+  });
+
+  it("filters sites by name when typing", async () => {
+    render(<HomePage />);
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("搜索商场、地铁站或地址");
+    fireEvent.input(input, { target: { value: "陆家嘴" } });
+
+    expect(screen.getByText("陆家嘴地铁站寄存点")).toBeInTheDocument();
+    expect(screen.queryByText("人民广场寄存点")).not.toBeInTheDocument();
+    expect(screen.queryByText("徐家汇寄存点")).not.toBeInTheDocument();
+  });
+
+  it("filters sites by address when typing", async () => {
+    render(<HomePage />);
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("搜索商场、地铁站或地址");
+    fireEvent.input(input, { target: { value: "南京" } });
+
+    expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    expect(screen.queryByText("徐家汇寄存点")).not.toBeInTheDocument();
+  });
+
+  it("shows a no-results message when search matches nothing", async () => {
+    render(<HomePage />);
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    const input = screen.getByPlaceholderText("搜索商场、地铁站或地址");
+    fireEvent.input(input, { target: { value: "不存在的地点" } });
+
+    expect(screen.getByText("未找到匹配的网点")).toBeInTheDocument();
   });
 });

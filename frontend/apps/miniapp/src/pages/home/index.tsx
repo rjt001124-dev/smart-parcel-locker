@@ -1,6 +1,6 @@
 import { Input, Text, View } from "@tarojs/components";
 import Taro from "@tarojs/taro";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toOrderStatusView, type OrderStatus } from "@spl/domain-ui/order";
 
 import { SiteCard } from "../../features/sites/site-card";
@@ -15,6 +15,7 @@ import "./index.scss";
 export default function HomePage() {
   const cityName = useLocationStore((state) => state.cityName);
   const sites = useSites();
+  const [keyword, setKeyword] = useState("");
 
   const activeOrderId = useActiveOrderStore((state) => state.activeOrderId);
   const hydrateActiveOrder = useActiveOrderStore((state) => state.hydrate);
@@ -111,6 +112,32 @@ export default function HomePage() {
     );
   }
 
+  const filteredSites = keyword
+    ? sites.sites.filter(
+        (s) =>
+          s.name.includes(keyword) || s.address.includes(keyword)
+      )
+    : sites.sites.slice(0, 2);
+
+  const renderSearchResults = () => {
+    if (keyword && filteredSites.length === 0) {
+      return (
+        <View className="home-page__no-results">
+          <Text>未找到匹配的网点</Text>
+        </View>
+      );
+    }
+    return filteredSites.map((site) => (
+      <SiteCard
+        key={site.id}
+        site={site}
+        onSelect={(id) => Taro.navigateTo({
+          url: `/pages/site-detail/index?id=${encodeURIComponent(id)}`
+        })}
+      />
+    ));
+  };
+
   return (
     <View className="page home-page">
       <Text
@@ -119,21 +146,22 @@ export default function HomePage() {
       >
         {cityName} · 定位成功
       </Text>
-      <Input className="home-page__search" placeholder="搜索商场、地铁站或地址" />
+      <Input
+        className="home-page__search"
+        placeholder="搜索商场、地铁站或地址"
+        value={keyword}
+        onInput={(e) => {
+          const detail = (e as unknown as { detail?: { value?: string } }).detail;
+          const target = e as unknown as React.ChangeEvent<HTMLInputElement>;
+          setKeyword((detail?.value ?? target.target?.value ?? "").trim());
+        }}
+      />
       {renderActiveOrder()}
       <View className="section-heading">
-        <Text>附近寄存点</Text>
+        <Text>{keyword ? "搜索结果" : "附近寄存点"}</Text>
         <Text onClick={() => Taro.navigateTo({ url: "/pages/sites/index" })}>查看全部</Text>
       </View>
-      {sites.sites.slice(0, 2).map((site) => (
-        <SiteCard
-          key={site.id}
-          site={site}
-          onSelect={(id) => Taro.navigateTo({
-            url: `/pages/site-detail/index?id=${encodeURIComponent(id)}`
-          })}
-        />
-      ))}
+      {renderSearchResults()}
     </View>
   );
 }
