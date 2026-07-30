@@ -11,6 +11,7 @@ import { PrimaryButton } from "../../components/primary-button";
 import { StatePanel } from "../../components/state-panel";
 import { StatusPill } from "../../components/status-pill";
 import { statusPillTone, useOrder } from "../../features/orders/use-order";
+import { scanCode } from "../../features/scan/scan-code";
 import "./index.scss";
 
 const API_BASE_URL =
@@ -26,12 +27,11 @@ export default function PickupPage() {
 
   const codeMatches = order != null && pickupCode.trim() === order.cell_no;
 
-  const onCodeInput = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (e: any) => {
-      const detail = e?.detail as { value?: string } | undefined;
-      const target = e?.target as { value?: string } | undefined;
-      const value = (detail?.value ?? target?.value ?? "").trim();
+  // Apply a pickup-code candidate (from typing or scanning) and validate it
+  // against the server order — never fabricates a match.
+  const applyCode = useCallback(
+    (raw: string) => {
+      const value = raw.trim();
       setPickupCode(value);
       if (value.length === 0) {
         setCodeError(false);
@@ -43,6 +43,27 @@ export default function PickupPage() {
     },
     [order]
   );
+
+  const onCodeInput = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (e: any) => {
+      const detail = e?.detail as { value?: string } | undefined;
+      const target = e?.target as { value?: string } | undefined;
+      applyCode(detail?.value ?? target?.value ?? "");
+    },
+    [applyCode]
+  );
+
+  // Scan only fills the pickup-code field; the server still validates it and
+  // the door-safety acknowledgement still governs the actual open.
+  const onScan = useCallback(async () => {
+    if (!order) return;
+    const result = await scanCode();
+    if (result.ok) {
+      applyCode(result.value);
+    }
+    // A cancelled or unsupported scan is ignored; the user can still type.
+  }, [order, applyCode]);
 
   const verifyCode = useCallback(() => {
     if (!order) return;
@@ -131,6 +152,14 @@ export default function PickupPage() {
           <Text className="pickup-page__code-hint">
             请输入柜格号 {order.cell_no} 确认取件
           </Text>
+          <View className="pickup-page__scan-row">
+            <View
+              className="pickup-page__scan-btn"
+              onClick={() => void onScan()}
+            >
+              <Text>扫码取件</Text>
+            </View>
+          </View>
           <Input
             className="pickup-page__code-input"
             placeholder="请输入柜格号"

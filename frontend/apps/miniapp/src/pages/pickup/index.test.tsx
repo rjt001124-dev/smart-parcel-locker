@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { navigateTo, getOrder, openPickupDoor } = vi.hoisted(() => ({
+const { navigateTo, getOrder, openPickupDoor, scanCode } = vi.hoisted(() => ({
   navigateTo: vi.fn(),
   getOrder: vi.fn(),
-  openPickupDoor: vi.fn()
+  openPickupDoor: vi.fn(),
+  scanCode: vi.fn()
 }));
 
 let routerParams: Record<string, string> = {};
@@ -36,6 +37,8 @@ vi.mock("@spl/api-client/http", () => ({
 vi.mock("@spl/api-client/order-client", () => ({
   createOrderClient: () => ({ getOrder, openPickupDoor })
 }));
+
+vi.mock("../../features/scan/scan-code", () => ({ scanCode }));
 
 import PickupPage from "./index";
 
@@ -156,5 +159,58 @@ describe("PickupPage", () => {
     await waitFor(() => {
       expect(screen.getByText("重试")).toBeInTheDocument();
     });
+  });
+
+  it("fills the pickup code from a successful scan and reveals the door action", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    scanCode.mockResolvedValue({ ok: true, value: "A-01", cancelled: false });
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("开门取件")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("扫码取件"));
+
+    await waitFor(() => {
+      expect(screen.getByText("开门取件")).toBeInTheDocument();
+    });
+    expect(screen.getByPlaceholderText(/请输入柜格号/)).toHaveValue("A-01");
+    expect(screen.getByText("开门前安全确认")).toBeInTheDocument();
+  });
+
+  it("flags a mismatched scan result like a typed code", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    scanCode.mockResolvedValue({ ok: true, value: "B-99", cancelled: false });
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("扫码取件"));
+
+    await waitFor(() => {
+      expect(screen.getByText("柜格号不匹配")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("开门取件")).not.toBeInTheDocument();
+  });
+
+  it("ignores a cancelled scan and keeps the code empty", async () => {
+    getOrder.mockResolvedValue(AWAITING_PICKUP_ORDER);
+    scanCode.mockResolvedValue({ ok: false, value: "", cancelled: true });
+    render(<PickupPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("扫码取件"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("开门取件")).toBeNull();
+    });
+    expect(screen.getByPlaceholderText(/请输入柜格号/)).toHaveValue("");
   });
 });

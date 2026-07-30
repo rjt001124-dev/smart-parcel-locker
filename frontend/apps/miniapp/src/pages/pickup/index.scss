@@ -68,6 +68,24 @@
   color: $color-text-secondary;
 }
 
+.pickup-page__scan-row {
+  margin-bottom: 12px;
+}
+
+.pickup-page__scan-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid $color-primary;
+  border-radius: 8px;
+  color: $color-primary;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .pickup-page__code-input {
   box-sizing: border-box;
   width: 100%;
