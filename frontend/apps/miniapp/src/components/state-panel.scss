@@ -3,7 +3,7 @@
 .state-panel {
   padding: 24px 16px;
   text-align: center;
-  border-radius: $radius-card;
+  border-radius: 8px;
   background: $color-surface;
 }
 
@@ -37,8 +37,8 @@
 }
 
 .skeleton {
-  background: #e8edf4;
-  border-radius: 12px;
+  background: $color-skeleton;
+  border-radius: 8px;
 }
 
 .skeleton--title {

@@ -4,7 +4,7 @@
   margin-bottom: 12px;
   padding: 14px;
   border: 1px solid $color-border;
-  border-radius: $radius-card;
+  border-radius: 8px;
   background: $color-surface;
 }
 
@@ -17,6 +17,9 @@
 .site-card__name {
   font-size: 16px;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .site-card__meta,
@@ -24,6 +27,8 @@
   display: block;
   margin-top: 8px;
   color: $color-text-secondary;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .status-pill {
@@ -35,20 +40,20 @@
 
 .status-pill--success {
   color: $color-success;
-  background: #e9f8ef;
+  background: $color-success-bg;
 }
 
 .status-pill--warning {
   color: $color-warning;
-  background: #fff4df;
+  background: $color-warning-bg;
 }
 
 .status-pill--danger {
   color: $color-danger;
-  background: #fee2e2;
+  background: $color-danger-bg;
 }
 
 .status-pill--neutral {
   color: $color-text-secondary;
-  background: #eef2f7;
+  background: $color-neutral-bg;
 }
