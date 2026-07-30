@@ -89,6 +89,7 @@ describe("PickupPage", () => {
 
     await enterPickupCode("A-01");
     expect(screen.getByText("开门取件")).toBeInTheDocument();
+    expect(screen.getByText("开门前安全确认")).toBeInTheDocument();
   });
 
   it("shows an error when the pickup code does not match", async () => {
@@ -130,6 +131,7 @@ describe("PickupPage", () => {
     });
 
     await enterPickupCode("A-01");
+    fireEvent.click(screen.getByText("我已知晓并确认安全"));
     fireEvent.click(screen.getByText("开门取件"));
 
     await waitFor(() => {
@@ -148,6 +150,7 @@ describe("PickupPage", () => {
     });
 
     await enterPickupCode("A-01");
+    fireEvent.click(screen.getByText("我已知晓并确认安全"));
     fireEvent.click(screen.getByText("开门取件"));
 
     await waitFor(() => {

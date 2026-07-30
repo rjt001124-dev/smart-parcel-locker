@@ -71,6 +71,7 @@ describe("StorePage", () => {
       expect(screen.getByText("人民广场寄存点")).toBeInTheDocument();
     });
     expect(screen.getByText("开门存入")).toBeInTheDocument();
+    expect(screen.getByText("开门前安全确认")).toBeInTheDocument();
     expect(screen.getAllByText("¥6.00").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -82,6 +83,7 @@ describe("StorePage", () => {
     await waitFor(() => {
       expect(screen.getByText("开门存入")).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByText("我已知晓并确认安全"));
     fireEvent.click(screen.getByText("开门存入"));
 
     await waitFor(() => {
@@ -99,6 +101,7 @@ describe("StorePage", () => {
     await waitFor(() => {
       expect(screen.getByText("开门存入")).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByText("我已知晓并确认安全"));
     fireEvent.click(screen.getByText("开门存入"));
 
     await waitFor(() => {
@@ -114,6 +117,7 @@ describe("StorePage", () => {
     await waitFor(() => {
       expect(screen.getByText("开门存入")).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByText("我已知晓并确认安全"));
     fireEvent.click(screen.getByText("开门存入"));
 
     await waitFor(() => {

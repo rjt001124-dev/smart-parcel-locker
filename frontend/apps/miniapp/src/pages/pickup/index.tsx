@@ -5,7 +5,7 @@ import { createTaroRequest } from "@spl/api-client/http";
 import { createOrderClient, type OrderDto } from "@spl/api-client/order-client";
 import { toOrderStatusView, type OrderStatus } from "@spl/domain-ui/order";
 
-import { DoorStatusPanel, type DoorPhase } from "../../components/door-status-panel";
+import { DoorSafetyGuard, type DoorPhase } from "../../components/door-safety-guard";
 import { FeeSummary } from "../../components/fee-summary";
 import { PrimaryButton } from "../../components/primary-button";
 import { StatePanel } from "../../components/state-panel";
@@ -142,9 +142,10 @@ export default function PickupPage() {
             <Text className="pickup-page__code-error">柜格号不匹配</Text>
           )}
           {codeMatches ? (
-            <DoorStatusPanel
+            <DoorSafetyGuard
               phase={phase}
               actionLabel="开门取件"
+              cellNo={order.cell_no}
               onAction={() => void open()}
             />
           ) : null}

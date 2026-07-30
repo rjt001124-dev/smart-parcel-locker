@@ -1,0 +1,79 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.door-safety-guard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.door-safety-guard__safety {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.door-safety-guard__safety-title {
+  color: $color-text-primary;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.door-safety-guard__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.door-safety-guard__item {
+  overflow: hidden;
+  color: $color-text-secondary;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.door-safety-guard__cell {
+  color: $color-text-primary;
+  font-size: 13px;
+}
+
+.door-safety-guard__ack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.door-safety-guard__checkbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  background: $color-background;
+  flex-shrink: 0;
+}
+
+.door-safety-guard__checkbox--checked {
+  border-color: $color-primary;
+  background: $color-primary;
+}
+
+.door-safety-guard__ack-label {
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+
+.door-safety-guard__hint {
+  overflow: hidden;
+  color: $color-danger;
+  font-size: 13px;
+  text-align: center;
+  text-overflow: ellipsis;
+}
