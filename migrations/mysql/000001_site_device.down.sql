@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS device_commands;
+DROP TABLE IF EXISTS locker_cells;
+DROP TABLE IF EXISTS locker_devices;
+DROP TABLE IF EXISTS sites;
+DROP TABLE IF EXISTS cities;

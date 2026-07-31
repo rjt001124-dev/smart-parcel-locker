@@ -1,0 +1,4 @@
+interface:
+  display_name: "Developing Site and Device Domain"
+  short_description: "Preserve locker site and device invariants"
+  default_prompt: "Use $developing-site-device-domain when changing site, locker, reservation, device, simulator, MySQL, Redis, or internal API behavior."

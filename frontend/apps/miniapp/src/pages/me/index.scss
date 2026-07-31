@@ -1,0 +1,127 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.me-page {
+  padding-bottom: 32px;
+}
+
+.me-page__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 0 16px;
+}
+
+.me-page__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: $color-primary;
+}
+
+.me-page__avatar-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.me-page__user {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.me-page__user-id {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.me-page__app-name {
+  font-size: 13px;
+  color: $color-text-secondary;
+}
+
+.me-page__dev-banner {
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  background: $color-banner-warning-bg;
+  font-size: 12px;
+  color: $color-banner-warning-text;
+}
+
+.me-page__shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.me-page__shortcut-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.me-page__shortcut-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: $color-primary;
+}
+
+.me-page__shortcut-label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.me-page__shortcut-arrow {
+  font-size: 22px;
+  color: $color-text-secondary;
+}
+
+.me-page__section-title {
+  display: block;
+  margin: 24px 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.me-page__help-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.me-page__help-item {
+  padding: 14px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.me-page__help-q {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.me-page__help-a {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: $color-text-secondary;
+}
+
+.me-page__version {
+  display: block;
+  margin-top: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: $color-text-secondary;
+}

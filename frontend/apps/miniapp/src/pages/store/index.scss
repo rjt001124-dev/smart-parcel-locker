@@ -1,0 +1,58 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.store-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.store-page__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.store-page .page-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.store-page__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.store-page__site {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.store-page__cell {
+  color: $color-text-secondary;
+  font-size: 13px;
+}
+
+.store-page__done {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.store-page__done-message {
+  padding: 16px;
+  color: $color-success;
+  font-size: 15px;
+  text-align: center;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}

@@ -1,0 +1,103 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.pickup-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.pickup-page__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pickup-page .page-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.pickup-page__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.pickup-page__site {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.pickup-page__cell {
+  color: $color-text-secondary;
+  font-size: 13px;
+}
+
+.pickup-page__done {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.pickup-page__done-message {
+  padding: 16px;
+  color: $color-success;
+  font-size: 15px;
+  text-align: center;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.pickup-page__code-section {
+  margin-top: 16px;
+}
+
+.pickup-page__code-hint {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: $color-text-secondary;
+}
+
+.pickup-page__scan-row {
+  margin-bottom: 12px;
+}
+
+.pickup-page__scan-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid $color-primary;
+  border-radius: 8px;
+  color: $color-primary;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pickup-page__code-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: $color-surface-muted;
+  font-size: 16px;
+}
+
+.pickup-page__code-error {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: $color-danger;
+}

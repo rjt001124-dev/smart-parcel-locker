@@ -1,0 +1,46 @@
+{
+  "name": "@spl/miniapp",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "build:weapp": "taro build --type weapp",
+    "dev:h5": "cross-env TARO_APP_API_BASE_URL=/api TARO_APP_PREVIEW_LATITUDE=31.2304 TARO_APP_PREVIEW_LONGITUDE=121.4737 TARO_APP_DEV_PAYMENT_SIMULATOR=true taro build --type h5 --watch",
+    "build:h5": "taro build --type h5",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@spl/api-client": "*",
+    "@spl/design-tokens": "*",
+    "@spl/domain-ui": "*",
+    "@tarojs/components": "4.2.1",
+    "@tarojs/plugin-framework-react": "4.2.1",
+    "@tarojs/plugin-platform-h5": "4.2.1",
+    "@tarojs/plugin-platform-weapp": "4.2.1",
+    "@tarojs/react": "4.2.1",
+    "@tarojs/runtime": "4.2.1",
+    "@tarojs/taro": "4.2.1",
+    "@tarojs/vite-runner": "^4.2.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zustand": "5.0.8"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-decorators": "7.28.0",
+    "@babel/plugin-transform-class-properties": "7.27.1",
+    "@tarojs/cli": "4.2.1",
+    "@tarojs/vite-runner": "4.2.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@types/react": "18.3.24",
+    "@types/react-dom": "18.3.7",
+    "@vitejs/plugin-react": "4.3.4",
+    "cross-env": "7.0.3",
+    "jsdom": "22.1.0",
+    "sass": "1.89.2",
+    "typescript": "5.8.3",
+    "vite": "4.5.14",
+    "vitest": "0.34.6"
+  }
+}

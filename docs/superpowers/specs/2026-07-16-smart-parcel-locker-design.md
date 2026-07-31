@@ -54,7 +54,7 @@ React 后台 ─┼─ HTTPS/WebSocket ─ Nginx ─ Kratos API
 Coze/数字人 ┘                              │
                          ┌─────────────────┼─────────────────┐
                          │                 │                 │
-                    PostgreSQL          Redis             Worker
+                    MySQL               Redis             Worker
                          │                 │                 │
                          └──── 支付宝 / 设备网关 / 通知渠道 ──┘
 ```
@@ -257,7 +257,7 @@ Figma 是前端实现和视觉验收的唯一基准。文件结构：
 ### 12.1 后端
 
 - 订单状态机、计费、优惠券和押金单元测试
-- PostgreSQL 事务和柜格并发锁定集成测试
+- MySQL 事务和柜格并发锁定集成测试
 - Protobuf/HTTP 契约测试
 - 支付验签、重复回调、金额不符和退款测试
 - 设备离线、超时、重复指令和柜门未关测试
@@ -302,7 +302,7 @@ GitHub Actions 执行：
 7. 主分支部署测试环境。
 8. 人工批准后发布生产。
 
-第一阶段采用 Docker Compose，包含 Nginx、API、Worker、PostgreSQL、Redis、Prometheus、Grafana 和 Pyroscope。生产规模扩大后迁移 Kubernetes，但不在 MVP 阶段引入不必要复杂度。
+第一阶段采用 Docker Compose，包含 Nginx、API、Worker、MySQL、Redis、Prometheus、Grafana 和 Pyroscope。生产规模扩大后迁移 Kubernetes，但不在 MVP 阶段引入不必要复杂度。
 
 部署交付物包含 `.env.example`、数据库迁移、初始化管理员命令、健康检查、备份恢复、日志轮转、HTTPS 配置、回滚脚本和上线检查清单。
 

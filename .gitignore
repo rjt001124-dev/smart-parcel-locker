@@ -40,3 +40,12 @@ __pycache__/
 
 # Isolated implementation worktrees
 .worktrees/
+
+# Frontend dependencies and generated outputs
+frontend/node_modules/
+frontend/**/node_modules/
+frontend/**/.swc/
+frontend/apps/miniapp/dist/
+frontend/apps/miniapp/dist-h5/
+frontend/apps/miniapp/project.private.config.json
+frontend/coverage/

@@ -1,0 +1,18 @@
+version: v2
+modules:
+  - path: api
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+  except:
+    # Go Kratos generates conventional *Reply transport types; requiring
+    # *Response names would conflict with the project's public Go API style.
+    - RPC_RESPONSE_STANDARD_NAME
+    # Create and lookup intentionally share the stable DeviceCommandReply
+    # representation so clients consume one command status contract.
+    - RPC_REQUEST_RESPONSE_UNIQUE
+breaking:
+  use:
+    - FILE

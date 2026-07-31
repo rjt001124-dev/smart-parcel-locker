@@ -1,0 +1,30 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.location-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.location-page__list {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  background: $color-surface;
+}
+
+.city-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 16px;
+  border-bottom: 1px solid $color-border;
+}
+
+.city-row:last-child {
+  border-bottom: 0;
+}
+
+.city-row__province {
+  color: $color-text-secondary;
+}

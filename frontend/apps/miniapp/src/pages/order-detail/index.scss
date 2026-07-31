@@ -1,0 +1,74 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.order-detail-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.order-detail-page__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.order-detail-page .page-title {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.order-detail-page__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.order-detail-page__site {
+  font-size: 16px;
+  font-weight: 600;
+  color: $color-text-primary;
+}
+
+.order-detail-page__meta {
+  overflow: hidden;
+  color: $color-text-secondary;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.order-detail-page__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.order-detail-page__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.order-detail-page__contact-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.order-detail-page__contact-hint {
+  color: $color-text-secondary;
+  font-size: 13px;
+  line-height: 1.6;
+}

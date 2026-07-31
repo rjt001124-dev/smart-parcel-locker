@@ -1,0 +1,53 @@
+CREATE TABLE orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_no VARCHAR(32) NOT NULL,
+  user_id VARCHAR(64) NOT NULL,
+  site_id BIGINT UNSIGNED NOT NULL,
+  cell_id BIGINT UNSIGNED NOT NULL,
+  size ENUM('SMALL', 'MEDIUM', 'LARGE') NOT NULL,
+  status ENUM(
+    'PENDING_PAYMENT',
+    'PAID',
+    'AWAITING_DEPOSIT',
+    'IN_STORAGE',
+    'AWAITING_PICKUP',
+    'OVERDUE',
+    'COMPLETED',
+    'CANCELLED'
+  ) NOT NULL DEFAULT 'PENDING_PAYMENT',
+  duration_minutes INT NOT NULL,
+  rent_fee_fen BIGINT NOT NULL DEFAULT 0,
+  deposit_fen BIGINT NOT NULL DEFAULT 0,
+  discount_fen BIGINT NOT NULL DEFAULT 0,
+  total_fen BIGINT NOT NULL DEFAULT 0,
+  overdue_fee_fen BIGINT NOT NULL DEFAULT 0,
+  paid_at DATETIME(6) NULL,
+  deposited_at DATETIME(6) NULL,
+  expires_at DATETIME(6) NULL,
+  completed_at DATETIME(6) NULL,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_orders_order_no (order_no),
+  KEY idx_orders_user_created (user_id, created_at),
+  KEY idx_orders_site (site_id),
+  KEY idx_orders_cell (cell_id),
+  KEY idx_orders_status (status),
+  CONSTRAINT fk_orders_site FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_orders_cell FOREIGN KEY (cell_id) REFERENCES locker_cells(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE order_status_logs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NOT NULL,
+  from_status VARCHAR(32) NOT NULL,
+  to_status VARCHAR(32) NOT NULL,
+  reason VARCHAR(64) NOT NULL,
+  actor VARCHAR(64) NOT NULL,
+  trace_id VARCHAR(64) NULL,
+  idempotency_key VARCHAR(128) NULL,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY idx_order_status_logs_order (order_id, created_at),
+  CONSTRAINT fk_order_status_logs_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

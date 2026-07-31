@@ -1,0 +1,32 @@
+@use "@spl/design-tokens/tokens.scss" as *;
+
+.door-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  padding: 16px;
+  text-align: center;
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+}
+
+.door-status-panel__message {
+  overflow: hidden;
+  color: $color-text-primary;
+  font-size: 14px;
+  text-overflow: ellipsis;
+}
+
+.door-status-panel--opening .door-status-panel__message {
+  color: $color-primary;
+}
+
+.door-status-panel--opened .door-status-panel__message {
+  color: $color-success;
+}
+
+.door-status-panel--failed .door-status-panel__message {
+  color: $color-danger;
+}
